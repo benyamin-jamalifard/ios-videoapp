@@ -16,7 +16,7 @@ struct ExploreView: View {
                 if !postTypes.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            chip("همه", selected: selectedType == nil) { selectedType = nil }
+                            chip(L("همه", "All"), selected: selectedType == nil) { selectedType = nil }
                             ForEach(postTypes) { type in
                                 chip(type.termName ?? "", selected: selectedType == type.termId) {
                                     selectedType = type.termId
@@ -31,21 +31,26 @@ struct ExploreView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
-                        shortcut("آرشیو", icon: "square.grid.2x2") {
-                            ArchiveView(title: "آرشیو", filter: ArchiveFilter(postType: selectedType))
+                        shortcut(L("آرشیو", "All titles"), icon: "square.grid.2x2") {
+                            ArchiveView(title: L("آرشیو", "All titles"), filter: ArchiveFilter(postType: selectedType))
                         }
                         if appState.config.kelaketappShowActorsArchive {
-                            shortcut("آرشیو بازیگران", icon: "person.2") { ActorsArchiveView() }
+                            shortcut(L("آرشیو بازیگران", "Actors"), icon: "person.2") { ActorsArchiveView() }
                         }
                         if appState.config.showWeekly {
-                            shortcut("جدول پخش سریال‌ها", icon: "calendar.badge.clock") { WeeklyScheduleView() }
+                            shortcut(L("جدول پخش سریال‌ها", "TV schedule"), icon: "calendar.badge.clock") { WeeklyScheduleView() }
                         }
                         if appState.config.kelaketappShowBoxoffice {
-                            shortcut("باکس آفیس", icon: "chart.line.uptrend.xyaxis") { BoxOfficeView() }
+                            shortcut(L("باکس آفیس", "Box office"), icon: "chart.line.uptrend.xyaxis") { BoxOfficeView() }
                         }
-                        shortcut("۲۵۰ برتر IMDb", icon: "trophy") { Top250View() }
-                        shortcut("کالکشن‌ها", icon: "square.stack.3d.up") { CollectionsView() }
-                        shortcut("لیست‌های کاربران", icon: "list.star") { PublicListsView() }
+                        shortcut(L("۲۵۰ برتر IMDb", "IMDb Top 250"), icon: "trophy") { Top250View() }
+                        shortcut(L("کالکشن‌ها", "Collections"), icon: "square.stack.3d.up") { CollectionsView() }
+                        if !appState.isInternational {
+                            shortcut("لیست‌های کاربران", icon: "list.star") { PublicListsView() }
+                            if appState.config.activeBlog {
+                                shortcut("وبلاگ", icon: "newspaper") { BlogListView() }
+                            }
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -66,7 +71,7 @@ struct ExploreView: View {
             .padding(.vertical)
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("دسته بندی")
+        .navigationTitle(L("دسته بندی", "Browse"))
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if genres.isEmpty, let result = try? await appState.api.genres() {
@@ -84,7 +89,7 @@ struct ExploreView: View {
                 .font(.subheadline.bold())
                 .padding(.horizontal, 16).padding(.vertical, 9)
                 .background(selected ? Theme.accent : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 16))
-                .foregroundStyle(selected ? .white : Theme.muted)
+                .foregroundStyle(selected ? .white : Theme.secondaryText)
         }
         .buttonStyle(.plain)
     }
@@ -96,9 +101,9 @@ struct ExploreView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.accentText)
                     .frame(width: 30, height: 30)
-                    .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
+                    .background(Theme.accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 9))
                 Text(title).font(.footnote.bold())
             }
             .padding(.vertical, 8).padding(.horizontal, 12)

@@ -56,7 +56,6 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         UIBackgroundModes: [audio, remote-notification]
-        LSApplicationQueriesSchemes: [vlc-x-callback, infuse]
         # Google Cast device discovery (CC1AD845 is the Default Media Receiver).
         NSBonjourServices: [_googlecast._tcp, _CC1AD845._googlecast._tcp]
         NSLocalNetworkUsageDescription: برای پیدا کردن تلویزیون و Chromecast در شبکه خانگی، جهت پخش ویدیو روی آن‌ها

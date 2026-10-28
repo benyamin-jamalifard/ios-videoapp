@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         CastManager.configure()
+        Task { @MainActor in DownloadManager.shared.activate() }
 
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
             return true
@@ -26,6 +27,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             DispatchQueue.main.async { application.registerForRemoteNotifications() }
         }
         return true
+    }
+
+    /// iOS relaunched the app to deliver finished background downloads.
+    func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
+                     completionHandler: @escaping () -> Void) {
+        Task { @MainActor in
+            DownloadManager.shared.backgroundCompletionHandler = completionHandler
+            DownloadManager.shared.activate()
+        }
     }
 
     func application(_ application: UIApplication,

@@ -8,6 +8,8 @@ final class AppState: ObservableObject {
     @Published private(set) var token: String?
     @Published private(set) var user: StoredUser?
     @Published private(set) var subscription: UserInfo?
+    /// Outside Iran: an English, browse-only catalogue (see `Region`).
+    @Published private(set) var isInternational = Region.isInternational
 
     let api: APIClient
 
@@ -30,6 +32,8 @@ final class AppState: ObservableObject {
     var userId: Int? { user?.id ?? subscription?.id }
 
     func bootstrap() async {
+        // The country lookup runs alongside the config request; the splash waits for both.
+        async let region = Region.refresh()
         if let host = await api.fetchPublishedHost(), host != api.currentHost {
             api.useHost(host)
         }
@@ -43,8 +47,10 @@ final class AppState: ObservableObject {
             Theme.apply(config)
             self.config = config
         }
+        isInternational = await region
         isConfigLoaded = true
-        await refreshSubscription()
+        // The international catalogue hides everything an account is for.
+        if !isInternational { await refreshSubscription() }
     }
 
     /// Stores the JWT from a successful OTP or password login.

@@ -20,7 +20,7 @@ struct ArchiveView: View {
     var body: some View {
         ScrollView {
             if pager.isLoaded && pager.items.isEmpty {
-                Text(pager.error ?? "موردی با این فیلترها پیدا نشد.")
+                Text(pager.error ?? L("موردی با این فیلترها پیدا نشد.", "Nothing matches these filters."))
                     .foregroundStyle(Theme.muted)
                     .padding(.top, 60)
             } else {
@@ -71,27 +71,27 @@ private struct ArchiveFilterSheet: View {
         NavigationStack {
             Form {
                 if let terms {
-                    termPicker("نوع", selection: $draft.postType, terms: terms.postType, disabled: locked.postType != nil)
-                    termPicker("ژانر", selection: $draft.genre, terms: terms.genres, disabled: locked.genre != nil)
-                    termPicker("سال", selection: $draft.year, terms: terms.year, disabled: locked.year != nil)
-                    termPicker("کشور", selection: $draft.country, terms: terms.country, disabled: locked.country != nil)
+                    termPicker(L("نوع", "Type"), selection: $draft.postType, terms: terms.postType, disabled: locked.postType != nil)
+                    termPicker(L("ژانر", "Genre"), selection: $draft.genre, terms: terms.genres, disabled: locked.genre != nil)
+                    termPicker(L("سال", "Year"), selection: $draft.year, terms: terms.year, disabled: locked.year != nil)
+                    termPicker(L("کشور", "Country"), selection: $draft.country, terms: terms.country, disabled: locked.country != nil)
                 } else {
                     ProgressView().frame(maxWidth: .infinity)
                 }
-                Picker("مرتب‌سازی", selection: $draft.sort) {
+                Picker(L("مرتب‌سازی", "Sort by"), selection: $draft.sort) {
                     ForEach(ArchiveFilter.sortOptions, id: \.label) { option in
                         Text(option.label).tag(option.value)
                     }
                 }
             }
-            .navigationTitle("فیلترها")
+            .navigationTitle(L("فیلترها", "Filters"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("حذف فیلترها") { draft = locked }
+                    Button(L("حذف فیلترها", "Reset")) { draft = locked }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("اعمال") {
+                    Button(L("اعمال", "Apply")) {
                         filter = draft
                         dismiss()
                     }
@@ -105,7 +105,7 @@ private struct ArchiveFilterSheet: View {
 
     private func termPicker(_ title: String, selection: Binding<Int?>, terms: [FilterTerm], disabled: Bool) -> some View {
         Picker(title, selection: selection) {
-            Text("همه").tag(Int?.none)
+            Text(L("همه", "All")).tag(Int?.none)
             ForEach(terms) { term in
                 Text(term.termName ?? "").tag(term.termId)
             }

@@ -49,7 +49,7 @@ private struct BlogCard: View {
                 .clipped()
             VStack(alignment: .leading, spacing: 6) {
                 if let category = post.categories.first?.name {
-                    Text(category).font(.caption.bold()).foregroundStyle(Theme.accent)
+                    Text(category).font(.caption.bold()).foregroundStyle(Theme.accentText)
                 }
                 Text(post.title ?? "").font(.headline).multilineTextAlignment(.leading)
                 if let excerpt = post.excerpt?.plainText, !excerpt.isEmpty {
@@ -79,7 +79,6 @@ struct BlogPostView: View {
     let id: Int
     let title: String
 
-    @Environment(\.openURL) private var openURL
     @State private var post: BlogPost?
     @State private var error: String?
     @State private var openedRelated: BlogPost?
@@ -92,7 +91,7 @@ struct BlogPostView: View {
                                onOpenPost: { id in
                                    openedRelated = post.relatedPosts.first { $0.id == id }
                                },
-                               onOpenLink: { openURL($0) })
+                               onOpenLink: { AppRouter.shared.open($0) })
                     .ignoresSafeArea(edges: .bottom)
             } else if let error {
                 ErrorStateView(message: error) { Task { await load() } }

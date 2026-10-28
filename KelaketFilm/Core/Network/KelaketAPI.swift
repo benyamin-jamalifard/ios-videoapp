@@ -15,11 +15,11 @@ extension APIClient {
         try await send(Endpoint(path: "mobile/v2/film/\(id)"))
     }
 
-    func search(_ text: String, page: Int = 1) async throws -> [Post] {
-        let result: LossyArray<Post> = try await send(Endpoint(
-            path: "mobile/v1/search",
-            query: ["s": text, "page": String(page), "type_of_post": "all"]
-        ))
+    func search(_ text: String, filter: SearchFilter = SearchFilter(), page: Int = 1) async throws -> [Post] {
+        var query = filter.query
+        query["s"] = text
+        query["page"] = String(page)
+        let result: LossyArray<Post> = try await send(Endpoint(path: "mobile/v1/search", query: query))
         return result.wrappedValue
     }
 

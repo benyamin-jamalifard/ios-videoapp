@@ -216,7 +216,7 @@ struct TicketChatView: View {
                 .background(isMine ? Theme.accent.opacity(0.25) : Theme.surfaceRaised,
                             in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
             if let date = message.createdAt {
-                Text(date).font(.caption2).foregroundStyle(Theme.muted)
+                Text(date).font(.caption).foregroundStyle(Theme.muted)
             }
         }
         // In RTL, leading is the right edge: the user's own messages sit on the right.

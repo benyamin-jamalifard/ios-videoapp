@@ -56,7 +56,7 @@ struct ActiveSessionsView: View {
         HStack(spacing: 12) {
             Image(systemName: session.app != nil || session.sourceLabel == "app" ? "iphone" : "desktopcomputer")
                 .font(.title3)
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(Theme.accentText)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -77,7 +77,7 @@ struct ActiveSessionsView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Theme.accent.opacity(0.2), in: Capsule())
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.accentText)
             }
         }
     }

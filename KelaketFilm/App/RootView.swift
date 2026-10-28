@@ -3,36 +3,39 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         Group {
             if appState.isConfigLoaded {
                 TabView(selection: $router.tab) {
                     NavigationStack(path: $router.homePath) { HomeView().withFilmDestination() }
-                        .tabItem { Label("خانه", systemImage: "house.fill") }
+                        .tabItem { Label(L("خانه", "Home"), systemImage: "house.fill") }
                         .tag(AppTab.home)
 
-                    // Same tabs, in the same order, as the Android app.
+                    // Same tabs, in the same order, as the Android app; the blog
+                    // moved into the categories tab to make room for downloads.
                     NavigationStack { SearchView().withFilmDestination() }
-                        .tabItem { Label("جستجو", systemImage: "magnifyingglass") }
+                        .tabItem { Label(L("جستجو", "Search"), systemImage: "magnifyingglass") }
                         .tag(AppTab.search)
 
                     NavigationStack { ExploreView().withFilmDestination() }
-                        .tabItem { Label("دسته بندی", systemImage: "square.grid.2x2.fill") }
+                        .tabItem { Label(L("دسته بندی", "Browse"), systemImage: "square.grid.2x2.fill") }
                         .tag(AppTab.explore)
 
-                    if appState.config.activeBlog {
-                        NavigationStack { BlogListView() }
-                            .tabItem { Label("وبلاگ", systemImage: "newspaper") }
-                            .tag(AppTab.blog)
+                    if !appState.isInternational {
+                        NavigationStack { DownloadsView() }
+                            .tabItem { Label("دانلودها", systemImage: "arrow.down.circle.fill") }
+                            .tag(AppTab.downloads)
                     }
 
                     NavigationStack { ProfileView().withFilmDestination() }
-                        .tabItem { Label("پروفایل", systemImage: "person.crop.circle") }
+                        .tabItem {
+                            Label(L("پروفایل", "More"),
+                                  systemImage: appState.isInternational ? "ellipsis.circle" : "person.crop.circle")
+                        }
                         .tag(AppTab.profile)
                 }
-                .tint(Theme.accent)
+                .tint(Theme.accentText)
             } else {
                 SplashView()
             }
@@ -44,10 +47,8 @@ struct RootView: View {
             guard appState.isSignedIn, let pushToken = router.pushToken else { return }
             try? await appState.api.syncPushToken(pushToken)
         }
-        .onChange(of: router.externalURL) { url in
-            guard let url else { return }
-            openURL(url)
-            router.externalURL = nil
+        .sheet(item: $router.webLink) { link in
+            WebPageView(url: link.url, title: link.title)
         }
     }
 }

@@ -4,10 +4,24 @@ struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @State private var showLogin = false
     @State private var showRegister = false
+    @State private var webLink: WebLink?
 
     var body: some View {
         List {
-            if appState.isSignedIn {
+            if appState.isInternational {
+                Section {
+                    VStack(spacing: 12) {
+                        Image("Logo").resizable().scaledToFit().frame(height: 64)
+                        Text(Bundle.main.displayName).font(.headline)
+                        Text("Browse our catalogue of movies and series. Streaming and downloads are available in Iran only.")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+            } else if appState.isSignedIn {
                 Section {
                     NavigationLink { EditProfileView() } label: {
                         HStack(spacing: 14) {
@@ -20,7 +34,7 @@ struct ProfileView: View {
                                 if let detail = appState.user?.mobile ?? appState.user?.email {
                                     Text(detail)
                                         .font(.caption)
-                                        .foregroundStyle(Theme.muted)
+                                        .foregroundStyle(Theme.secondaryText)
                                 }
                             }
                         }
@@ -124,25 +138,31 @@ struct ProfileView: View {
                 }
             }
 
+            // Kept for the App Store (guideline 5.1.1 asks for a reachable privacy
+            // policy); they open inside the app, so the addresses stay hidden.
             Section {
                 if let link = appState.config.rulesLink, let url = URL(string: link) {
-                    Link("قوانین", destination: url)
+                    pageRow(L("قوانین", "Terms of use"), icon: "doc.text", url: url)
                 }
                 if let link = appState.config.privacyLink, let url = URL(string: link) {
-                    Link("حریم خصوصی", destination: url)
+                    pageRow(L("حریم خصوصی", "Privacy policy"), icon: "hand.raised", url: url)
                 }
-                if let telegram = appState.config.telegram, let url = URL(string: telegram) {
-                    Link("تلگرام", destination: url)
-                }
-                if let instagram = appState.config.instagram, let url = URL(string: instagram) {
-                    Link("اینستاگرام", destination: url)
+                if !appState.isInternational {
+                    if let telegram = appState.config.telegram, let url = URL(string: telegram) {
+                        pageRow("تلگرام", icon: "paperplane", url: url)
+                    }
+                    if let instagram = appState.config.instagram, let url = URL(string: instagram) {
+                        pageRow("اینستاگرام", icon: "camera", url: url)
+                    }
                 }
             }
+            .listRowBackground(Theme.surface)
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("پروفایل")
+        .navigationTitle(L("پروفایل", "More"))
         .refreshable { await appState.refreshSubscription() }
+        .sheet(item: $webLink) { link in WebPageView(url: link.url, title: link.title) }
         .sheet(isPresented: $showLogin) { LoginView().environmentObject(appState) }
         .sheet(isPresented: $showRegister) {
             RegisterView { _ in
@@ -154,5 +174,19 @@ struct ProfileView: View {
             }
             .environmentObject(appState)
         }
+    }
+
+    private func pageRow(_ title: String, icon: String, url: URL) -> some View {
+        Button { webLink = WebLink(url: url, title: title) } label: {
+            HStack {
+                Label(title, systemImage: icon)
+                Spacer()
+                Image(systemName: "chevron.forward")
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }

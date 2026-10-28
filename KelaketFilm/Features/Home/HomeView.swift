@@ -39,8 +39,10 @@ struct HomeView: View {
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink { NotificationsView() } label: {
-                    Image(systemName: "bell")
+                if !appState.isInternational {
+                    NavigationLink { NotificationsView() } label: {
+                        Image(systemName: "bell")
+                    }
                 }
             }
         }
@@ -60,8 +62,8 @@ struct HomeView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "calendar.badge.clock")
                                 .font(.title3)
-                                .foregroundStyle(Theme.accent)
-                            Text("برنامه پخش هفتگی سریال‌ها").font(.subheadline.bold())
+                                .foregroundStyle(Theme.accentText)
+                            Text(L("برنامه پخش هفتگی سریال‌ها", "Weekly TV schedule")).font(.subheadline.bold())
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -71,7 +73,7 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
 
-                if let message = appState.config.adminMessage {
+                if !appState.isInternational, let message = appState.config.adminMessage {
                     AdminMessageCard(title: appState.config.adminMessageTitle, message: message)
                 }
 
@@ -96,13 +98,14 @@ struct HomeView: View {
                     }
                 }
 
-                if appState.config.watchProgressActive,
+                if appState.config.watchProgressActive, !appState.isInternational,
                    let progress = home.watchProgress, !progress.data.isEmpty {
                     ContinueWatchingRow(block: progress)
                 }
 
                 if let updated = home.updatedSeries, !updated.data.isEmpty {
-                    PostRow(title: updated.title ?? "سریال‌های به‌روز شده", posts: updated.data)
+                    PostRow(title: appState.isInternational ? "Recently updated series" : updated.title ?? "سریال‌های به‌روز شده",
+                            posts: updated.data)
                 }
 
                 ForEach(home.selectedCats) { category in
@@ -188,7 +191,7 @@ private struct AdminMessageCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "megaphone.fill").foregroundStyle(Theme.accent)
+                Image(systemName: "megaphone.fill").foregroundStyle(Theme.accentText)
                 if let title { Text(title).font(.subheadline.bold()) }
             }
             Text(Self.markdown(message.plainText))
@@ -217,8 +220,7 @@ private struct ContinueWatchingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(block.title ?? "ادامه تماشا")
-                .font(.headline)
+            SectionTitle(text: block.title ?? "ادامه تماشا")
                 .padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
@@ -237,12 +239,12 @@ private struct ContinueWatchingRow: View {
                                     }
                                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
                                 Text(item.name ?? item.title ?? "")
-                                    .font(.caption)
+                                    .font(.caption.weight(.medium))
                                     .lineLimit(1)
                                 if let label = item.episodeLabel ?? item.remainingLabel {
                                     Text(label)
-                                        .font(.caption2)
-                                        .foregroundStyle(Theme.muted)
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText)
                                 }
                             }
                             .frame(width: 200, alignment: .leading)

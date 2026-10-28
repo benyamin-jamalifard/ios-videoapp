@@ -13,7 +13,7 @@ struct LoginView: View {
                 VStack(spacing: 24) {
                     Image(systemName: "film.stack")
                         .font(.system(size: 48))
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.accentText)
                         .padding(.top, 32)
 
                     if useOTP {

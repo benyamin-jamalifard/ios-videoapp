@@ -1,9 +1,15 @@
-import UIKit
+import Foundation
+
+/// One quality of the same video.
+struct PlaybackSource: Hashable {
+    let label: String
+    let url: URL
+}
 
 /// What to play and where to report progress for it.
 struct PlaybackItem: Identifiable {
     let id = UUID()
-    let url: URL
+    var url: URL
     let title: String
     let postId: Int
     /// "film" or "series" — matches the plugin's `content_type`.
@@ -16,17 +22,32 @@ struct PlaybackItem: Identifiable {
     var subtitleURL: URL?
     /// Shown on the TV while casting.
     var posterURL: URL?
+    /// Other qualities of the same video, for switching in the player.
+    var sources: [PlaybackSource] = []
+    /// The following episodes of the season, in order.
+    var upNext: [PlaybackItem] = []
+    /// A downloaded file, played without the network.
+    var isOffline = false
+
+    /// "S1 · E3" for series, used under the title.
+    var episodeLabel: String? {
+        contentType == "series" && episodeNo > 0 ? "فصل \(seasonNo) · قسمت \(episodeNo)" : nil
+    }
 }
 
 enum ContentAccess {
-    case allowed, needsLogin, needsSubscription
+    case allowed, needsLogin, needsSubscription, unavailableInRegion
 }
 
 extension AppState {
-    /// Mirrors the plugin's gating, using the `vip_lock` option.
+    /// Mirrors the plugin's gating, using the `vip_lock` option. Outside Iran
+    /// nothing plays or downloads.
     ///
     /// - Parameter feature: "playonline" or "download".
     func access(to feature: String, paid: Bool) -> ContentAccess {
+        if isInternational {
+            return .unavailableInRegion
+        }
         if !isSignedIn && (paid || config.requireLoginPosts) {
             return .needsLogin
         }
@@ -39,19 +60,9 @@ extension AppState {
 }
 
 enum Playback {
-    /// AVPlayer handles MP4/MOV/HLS. MKV and AVI (common for download links) need an external player.
+    /// AVPlayer handles MP4/MOV/HLS; MKV and AVI do not play on iOS.
     static func isNativelyPlayable(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
         return ext.isEmpty || ["mp4", "m4v", "mov", "m3u8", "mp3", "m4a"].contains(ext)
-    }
-
-    /// VLC for iOS, when installed (declared in LSApplicationQueriesSchemes).
-    @MainActor
-    static func externalPlayerURL(for url: URL) -> URL? {
-        guard let encoded = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
-              let vlc = URL(string: "vlc-x-callback://x-callback-url/stream?url=\(encoded)"),
-              UIApplication.shared.canOpenURL(vlc)
-        else { return nil }
-        return vlc
     }
 }

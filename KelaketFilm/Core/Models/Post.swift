@@ -26,7 +26,8 @@ struct Post: Decodable, Identifiable, Hashable {
     @LossyBool var doble: Bool
 
     var displayName: String {
-        name ?? title ?? enTitle ?? ""
+        if Region.isInternational, let enTitle { return enTitle }
+        return name ?? title ?? enTitle ?? ""
     }
 
     var posterURL: URL? {

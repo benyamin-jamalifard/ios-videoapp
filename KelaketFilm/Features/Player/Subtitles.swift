@@ -11,6 +11,10 @@ struct SubtitleCue: Equatable {
 /// so the player loads the site's soft subtitles itself and draws the cues.
 enum Subtitles {
     static func load(from url: URL) async -> [SubtitleCue] {
+        // Downloaded subtitles are read from disk.
+        if url.isFileURL {
+            return (try? Data(contentsOf: url)).map { parse(decode($0)) } ?? []
+        }
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return [] }
         return parse(decode(data))
     }

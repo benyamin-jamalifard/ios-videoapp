@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppTab: Hashable {
-    case home, explore, search, blog, profile
+    case home, explore, search, downloads, profile
 }
 
 /// Cross-cutting navigation: deep links from notifications and the
@@ -13,15 +13,15 @@ final class AppRouter: ObservableObject {
     @Published var tab: AppTab = .home
     @Published var homePath = NavigationPath()
     @Published var pushToken: String?
-    /// A web link from a notification, for the view layer to open with `openURL`.
-    @Published var externalURL: URL?
+    /// A web link to show in the in-app page (never in Safari, so it stays hidden).
+    @Published var webLink: WebLink?
 
     func open(_ url: URL) {
         if let id = Self.filmID(in: url) {
             tab = .home
             homePath.append(FilmRoute(id: id))
         } else if url.scheme == "http" || url.scheme == "https" {
-            externalURL = url
+            webLink = WebLink(url: url)
         }
     }
 

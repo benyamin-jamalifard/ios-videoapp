@@ -41,13 +41,51 @@ struct ArchiveFilter: Hashable {
         return query
     }
 
-    static let sortOptions: [(value: String?, label: String)] = [
-        (nil, "پیش‌فرض"),
-        ("newest", "جدیدترین"),
-        ("oldest", "قدیمی‌ترین"),
-        ("imdb_score", "امتیاز IMDb"),
-        ("updated", "به‌روزشده"),
-    ]
+    static var sortOptions: [(value: String?, label: String)] {
+        [
+            (nil, L("پیش‌فرض", "Default")),
+            ("newest", L("جدیدترین", "Newest")),
+            ("oldest", L("قدیمی‌ترین", "Oldest")),
+            ("imdb_score", L("امتیاز IMDb", "IMDb rating")),
+            ("updated", L("به‌روزشده", "Recently updated")),
+        ]
+    }
+}
+
+/// Filters for `GET mobile/v1/search`. Unlike the archive, it takes term slugs.
+struct SearchFilter: Hashable {
+    var postType: String?
+    var genre: String?
+    var fromYear: Int?
+    var toYear: Int?
+    var country: String?
+    var dubbed = false
+    var subtitled = false
+    var streamable = false
+
+    var isEmpty: Bool { self == SearchFilter() }
+
+    /// How many filters are set, for the badge on the filter button.
+    var count: Int {
+        [postType != nil, genre != nil, fromYear != nil || toYear != nil, country != nil,
+         dubbed, subtitled, streamable].filter { $0 }.count
+    }
+
+    var query: [String: String] {
+        var query = ["type_of_post": postType ?? "all"]
+        if let genre { query["genre"] = genre }
+        // The plugin needs both ends of the year range.
+        if fromYear != nil || toYear != nil {
+            let from = fromYear ?? 1900, to = toYear ?? Calendar.current.component(.year, from: Date()) + 1
+            query["from_year"] = String(min(from, to))
+            query["to_year"] = String(max(from, to))
+        }
+        if let country { query["country"] = country }
+        if dubbed { query["has_dubbed"] = "1" }
+        if subtitled { query["has_subtitle"] = "1" }
+        if streamable { query["has_playonline"] = "1" }
+        return query
+    }
 }
 
 struct ArchivePage: Decodable {

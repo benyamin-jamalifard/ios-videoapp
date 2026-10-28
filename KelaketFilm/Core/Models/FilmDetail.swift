@@ -45,7 +45,9 @@ struct FilmDetail: Decodable, Hashable {
     @LossyInt var totalComments: Int?
     @LossyInt var totalPages: Int?
 
-    var displayName: String { name ?? enTitle ?? "" }
+    var displayName: String {
+        (Region.isInternational ? enTitle ?? name : name ?? enTitle) ?? ""
+    }
     var isSeries: Bool { !serialDl.isEmpty }
     var backdropURL: URL? { URL(string: cover ?? posterFullsize ?? poster ?? "") }
     var posterURL: URL? { URL(string: posterFullsize ?? poster ?? "") }

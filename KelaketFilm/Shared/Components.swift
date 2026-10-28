@@ -48,7 +48,8 @@ struct PosterCard: View {
                 }
 
             Text(post.displayName)
-                .font(.caption)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(1)
                 .frame(width: width, alignment: .leading)
         }
@@ -94,6 +95,9 @@ struct PostRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Theme.accent)
+                    .frame(width: 4, height: 18)
                 Text(title)
                     .font(.headline)
                 Spacer()
@@ -102,11 +106,11 @@ struct PostRow: View {
                         ArchiveView(title: title, filter: seeAll)
                     } label: {
                         HStack(spacing: 4) {
-                            Text("مشاهده همه")
-                            Image(systemName: "chevron.left").font(.caption2.bold())
+                            Text(L("مشاهده همه", "See all"))
+                            Image(systemName: "chevron.forward").font(.caption2.bold())
                         }
-                        .font(.caption)
-                        .foregroundStyle(Theme.muted)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.accentText)
                         .padding(.horizontal, 10).padding(.vertical, 5)
                         .background(Theme.surface, in: Capsule())
                     }
@@ -129,6 +133,20 @@ struct PostRow: View {
     }
 }
 
+/// A section heading with the accent bar used across the app.
+struct SectionTitle: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Theme.accent)
+                .frame(width: 4, height: 18)
+            Text(text).font(.headline)
+        }
+    }
+}
+
 struct ErrorStateView: View {
     let message: String
     let retry: () -> Void
@@ -141,8 +159,9 @@ struct ErrorStateView: View {
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.muted)
-            Button("تلاش دوباره", action: retry)
+            Button(L("تلاش دوباره", "Try again"), action: retry)
                 .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -14,7 +14,7 @@ struct BoxOfficeView: View {
                         .listRowBackground(Color.clear)
                 }
                 if boxOffice.data.isEmpty {
-                    Text(boxOffice.message ?? "اطلاعاتی موجود نیست.")
+                    Text(boxOffice.message ?? L("اطلاعاتی موجود نیست.", "No data available."))
                         .foregroundStyle(Theme.muted)
                         .listRowBackground(Color.clear)
                 }
@@ -34,7 +34,7 @@ struct BoxOfficeView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("باکس‌آفیس")
+        .navigationTitle(L("باکس‌آفیس", "Box office"))
         .task { await load() }
         .refreshable { await load() }
     }
@@ -43,7 +43,7 @@ struct BoxOfficeView: View {
         HStack(spacing: 12) {
             Text("\(item.rank ?? 0)")
                 .font(.title3.bold())
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(Theme.accentText)
                 .frame(width: 30)
             RemoteImage(url: URL(string: item.poster ?? ""))
                 .frame(width: 50, height: 75)
@@ -74,11 +74,13 @@ struct BoxOfficeView: View {
 struct WeeklyScheduleView: View {
     /// Keys of the theme's `series_tabbed` option, Saturday first.
     /// Not defined in the plugin; adjust if the theme uses different keys.
-    static let days: [(key: String, label: String)] = [
-        ("saturday", "شنبه"), ("sunday", "یکشنبه"), ("monday", "دوشنبه"),
-        ("tuesday", "سه‌شنبه"), ("wednesday", "چهارشنبه"), ("thursday", "پنجشنبه"),
-        ("friday", "جمعه"),
-    ]
+    static var days: [(key: String, label: String)] {
+        [
+            ("saturday", L("شنبه", "Sat")), ("sunday", L("یکشنبه", "Sun")), ("monday", L("دوشنبه", "Mon")),
+            ("tuesday", L("سه‌شنبه", "Tue")), ("wednesday", L("چهارشنبه", "Wed")),
+            ("thursday", L("پنجشنبه", "Thu")), ("friday", L("جمعه", "Fri")),
+        ]
+    }
 
     @State private var day = WeeklyScheduleView.today
     @State private var series: [WeeklySeries]?
@@ -90,7 +92,7 @@ struct WeeklyScheduleView: View {
                     ForEach(Self.days, id: \.key) { item in
                         Button(item.label) { day = item.key }
                             .buttonStyle(.bordered)
-                            .tint(day == item.key ? Theme.accent : .gray)
+                            .tint(day == item.key ? Theme.accentText : .gray)
                     }
                 }
                 .padding()
@@ -99,7 +101,7 @@ struct WeeklyScheduleView: View {
             List {
                 if let series {
                     if series.isEmpty {
-                        Text("در این روز سریالی پخش نمی‌شود.")
+                        Text(L("در این روز سریالی پخش نمی‌شود.", "No series air on this day."))
                             .foregroundStyle(Theme.muted)
                             .listRowBackground(Color.clear)
                     }
@@ -126,7 +128,7 @@ struct WeeklyScheduleView: View {
             .scrollContentBackground(.hidden)
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("برنامه پخش")
+        .navigationTitle(L("برنامه پخش", "TV schedule"))
         .task(id: day) {
             series = nil
             series = (try? await APIClient.shared.weeklySeries(day: day)) ?? []
@@ -147,9 +149,9 @@ struct Top250View: View {
 
     var body: some View {
         List {
-            Picker("نوع", selection: $list) {
-                Text("فیلم").tag("movies")
-                Text("سریال").tag("series")
+            Picker(L("نوع", "Type"), selection: $list) {
+                Text(L("فیلم", "Movies")).tag("movies")
+                Text(L("سریال", "Series")).tag("series")
             }
             .pickerStyle(.segmented)
             .listRowBackground(Color.clear)
@@ -170,14 +172,14 @@ struct Top250View: View {
             if pager.isLoading {
                 ProgressView().frame(maxWidth: .infinity).listRowBackground(Color.clear)
             } else if pager.isLoaded && pager.items.isEmpty {
-                Text(pager.error ?? "اطلاعاتی موجود نیست.")
+                Text(pager.error ?? L("اطلاعاتی موجود نیست.", "No data available."))
                     .foregroundStyle(Theme.muted)
                     .listRowBackground(Color.clear)
             }
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("۲۵۰ برتر IMDb")
+        .navigationTitle(L("۲۵۰ برتر IMDb", "IMDb Top 250"))
         .task(id: list) {
             let current = list
             pager.replaceFetch { page in
@@ -192,7 +194,7 @@ struct Top250View: View {
         HStack(spacing: 12) {
             Text("\(item.rank ?? 0)")
                 .font(.headline)
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(Theme.accentText)
                 .frame(width: 36)
             RemoteImage(url: URL(string: item.poster ?? ""))
                 .frame(width: 46, height: 68)
@@ -204,7 +206,7 @@ struct Top250View: View {
                         Label(rating, systemImage: "star.fill").foregroundStyle(.yellow)
                     }
                     if !onSite {
-                        Text("در سایت موجود نیست").foregroundStyle(Theme.muted)
+                        Text(L("در سایت موجود نیست", "Not on the site")).foregroundStyle(Theme.muted)
                     }
                 }
                 .font(.caption)
@@ -236,7 +238,7 @@ struct CollectionsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name ?? "").font(.subheadline.bold()).lineLimit(2)
                                 if let count = item.count {
-                                    Text("\(count) عنوان").font(.caption2).foregroundStyle(Theme.muted)
+                                    Text("\(count) عنوان").font(.caption).foregroundStyle(Theme.muted)
                                 }
                             }
                             .padding(10)
@@ -253,11 +255,11 @@ struct CollectionsView: View {
             .padding()
             if pager.isLoading { ProgressView() }
             if pager.isLoaded && pager.items.isEmpty {
-                Text(pager.error ?? "کالکشنی موجود نیست.").foregroundStyle(Theme.muted)
+                Text(pager.error ?? L("کالکشنی موجود نیست.", "No collections.")).foregroundStyle(Theme.muted)
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("کالکشن‌ها")
+        .navigationTitle(L("کالکشن‌ها", "Collections"))
         .task { if !pager.isLoaded { await pager.reload() } }
     }
 }

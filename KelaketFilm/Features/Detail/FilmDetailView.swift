@@ -1,14 +1,13 @@
 import SwiftUI
-import UIKit
 
 struct FilmDetailView: View {
     let id: Int
 
     @EnvironmentObject private var appState: AppState
-    @Environment(\.openURL) private var openURL
     @State private var detail: FilmDetail?
     @State private var error: String?
     @State private var playback: PlaybackItem?
+    @State private var webLink: WebLink?
     @State private var showLogin = false
     @State private var showAddToList = false
     @State private var selectedSeason = 0
@@ -29,7 +28,7 @@ struct FilmDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if let detail {
+                if let detail, !appState.isInternational {
                     if detail.isSeries {
                         Button { Task { await toggleNotification() } } label: {
                             Image(systemName: detail.notified ? "bell.fill" : "bell")
@@ -55,6 +54,9 @@ struct FilmDetailView: View {
                 .environmentObject(appState)
                 .onDisappear { Task { await load() } }
         }
+        .sheet(item: $webLink) { link in
+            WebPageView(url: link.url, title: link.title)
+        }
         .sheet(isPresented: $showLogin) {
             LoginView().environmentObject(appState)
         }
@@ -65,7 +67,7 @@ struct FilmDetailView: View {
             get: { notice != nil },
             set: { if !$0 { notice = nil } }
         )) {
-            Button("باشه", role: .cancel) {}
+            Button(L("باشه", "OK"), role: .cancel) {}
         }
     }
 
@@ -86,7 +88,12 @@ struct FilmDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header(detail)
-                primaryActions(detail)
+
+                if appState.isInternational {
+                    regionNotice
+                } else {
+                    primaryActions(detail)
+                }
 
                 if !detail.genres.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -96,9 +103,9 @@ struct FilmDetailView: View {
                                     ArchiveView(title: genre.name ?? "", filter: ArchiveFilter(genre: genre.id))
                                 } label: {
                                     Text(genre.name ?? "")
-                                        .font(.caption)
-                                        .padding(.horizontal, 10).padding(.vertical, 5)
-                                        .background(Theme.surface, in: Capsule())
+                                        .font(.footnote.weight(.medium))
+                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                        .background(Theme.surfaceRaised, in: Capsule())
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -108,31 +115,30 @@ struct FilmDetailView: View {
                 }
 
                 if let story = detail.story ?? detail.about {
-                    Text(story.plainText)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .lineSpacing(5)
+                    ExpandableText(text: story.plainText)
                         .padding(.horizontal)
                 }
 
-                voteRow(detail)
+                if !appState.isInternational {
+                    voteRow(detail)
 
-                if detail.isSeries {
-                    seasonsSection(detail)
-                } else if !detail.filmDl.isEmpty {
-                    filmLinksSection(detail)
+                    if detail.isSeries {
+                        seasonsSection(detail)
+                    } else if !detail.filmDl.isEmpty {
+                        filmLinksSection(detail)
+                    }
+
+                    commentsPreview(detail)
                 }
-
-                commentsPreview(detail)
 
                 if !detail.fullActors.isEmpty {
                     actorsRow(detail.fullActors)
                 }
                 if let collection = detail.collection, !collection.data.isEmpty {
-                    PostRow(title: collection.name ?? collection.title ?? "کالکشن", posts: collection.data)
+                    PostRow(title: collection.name ?? collection.title ?? L("کالکشن", "Collection"), posts: collection.data)
                 }
                 if !detail.related.isEmpty {
-                    PostRow(title: "پیشنهادهای مشابه", posts: detail.related)
+                    PostRow(title: L("پیشنهادهای مشابه", "More like this"), posts: detail.related)
                 }
             }
             .padding(.bottom, 32)
@@ -142,43 +148,71 @@ struct FilmDetailView: View {
     private func header(_ detail: FilmDetail) -> some View {
         ZStack(alignment: .bottomLeading) {
             RemoteImage(url: detail.backdropURL)
-                .frame(height: 240)
+                .frame(height: 260)
                 .frame(maxWidth: .infinity)
                 .clipped()
-                .overlay(LinearGradient(colors: [.clear, Theme.background],
-                                        startPoint: .center, endPoint: .bottom))
+                .overlay(LinearGradient(colors: [.black.opacity(0.1), Theme.background.opacity(0.7), Theme.background],
+                                        startPoint: .top, endPoint: .bottom))
 
             HStack(alignment: .bottom, spacing: 14) {
                 RemoteImage(url: detail.posterURL)
-                    .frame(width: 100, height: 150)
+                    .frame(width: 108, height: 162)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
-                    .shadow(radius: 8)
+                    .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius).stroke(.white.opacity(0.12)))
+                    .shadow(color: .black.opacity(0.6), radius: 12, y: 6)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(detail.displayName)
                         .font(.title3.bold())
-                    if let en = detail.enTitle, en != detail.displayName {
-                        Text(en).font(.caption).foregroundStyle(Theme.muted)
+                        .lineLimit(3)
+                    if let other = appState.isInternational ? detail.name : detail.enTitle,
+                       other != detail.displayName {
+                        Text(other).font(.footnote).foregroundStyle(Theme.secondaryText)
                     }
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         if let imdb = detail.imdbRating {
-                            Label(imdb, systemImage: "star.fill").foregroundStyle(.yellow)
+                            metaChip(Label(imdb, systemImage: "star.fill").foregroundStyle(.yellow))
                         }
                         if let year = detail.released {
-                            Text(year)
+                            metaChip(Text(year))
                         }
                         if let runtime = detail.runtime {
-                            Text(runtime)
+                            metaChip(Text(runtime))
                         }
                     }
-                    .font(.caption)
-                    .foregroundStyle(Theme.muted)
+                    .font(.caption.weight(.semibold))
                 }
             }
             .padding(.horizontal)
-            .offset(y: 50)
+            .offset(y: 56)
         }
-        .padding(.bottom, 50)
+        .padding(.bottom, 56)
+    }
+
+    private func metaChip<Content: View>(_ content: Content) -> some View {
+        content
+            .lineLimit(1)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var regionNotice: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "globe")
+                .font(.title3)
+                .foregroundStyle(Theme.accentText)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Streaming isn't available in your region")
+                    .font(.subheadline.bold())
+                Text("You can browse the catalogue, but watching and downloading are only available in Iran.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .padding(.horizontal)
     }
 
     @ViewBuilder
@@ -201,16 +235,26 @@ struct FilmDetailView: View {
                     Label("پخش آنلاین", systemImage: "play.fill")
                 }
                 .buttonStyle(PrimaryButtonStyle())
+            } else if detail.isSeries, let first = firstEpisode(detail) {
+                Button {
+                    play(first.link, detail: detail, season: first.season, episode: first.episode)
+                } label: {
+                    Label("پخش قسمت اول", systemImage: "play.fill")
+                }
+                .buttonStyle(PrimaryButtonStyle())
             }
 
             if let trailer = detail.trailer, let url = URL(string: trailer) {
                 Button {
-                    openURL(url)
+                    playTrailer(url, detail: detail)
                 } label: {
                     Label("تریلر", systemImage: "film")
+                        .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal)
@@ -220,14 +264,14 @@ struct FilmDetailView: View {
 
     private func filmLinksSection(_ detail: FilmDetail) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("پخش و دانلود").font(.headline)
+            SectionTitle(text: "پخش و دانلود")
 
             ForEach(Array(detail.filmDl.enumerated()), id: \.offset) { row, group in
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     if let title = group.versionLabel ?? group.rowInfo {
                         Text(title.plainText)
                             .font(.subheadline.bold())
-                            .foregroundStyle(group.versionType == "dub" ? .blue : Theme.accent)
+                            .foregroundStyle(group.versionType == "dub" ? Theme.dubbed : Theme.accentText)
                     }
 
                     let playLinks = filmPlayLinks(detail, row: row)
@@ -238,16 +282,21 @@ struct FilmDetailView: View {
                                     Button {
                                         play(link.url, detail: detail, row: row)
                                     } label: {
-                                        Label(link.label, systemImage: "play.circle.fill")
+                                        Label(link.label, systemImage: "play.fill")
+                                            .font(.footnote.bold())
+                                            .padding(.horizontal, 14).padding(.vertical, 8)
+                                            .background(Theme.accent, in: Capsule())
+                                            .foregroundStyle(.white)
                                     }
-                                    .buttonStyle(.borderedProminent)
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
                     }
 
                     ForEach(Array(group.data.enumerated()), id: \.offset) { _, link in
-                        downloadRow(link, paid: detail.isPaid)
+                        downloadRow(link, detail: detail,
+                                    target: .init(row: row, season: 0, episode: 0, label: nil))
                     }
                 }
                 .padding()
@@ -284,7 +333,7 @@ struct FilmDetailView: View {
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("قسمت‌ها").font(.headline)
+                SectionTitle(text: "قسمت‌ها")
                 Spacer()
                 if seasons.count > 1 {
                     Picker("فصل", selection: $selectedSeason) {
@@ -300,13 +349,13 @@ struct FilmDetailView: View {
                 let episodeNumber = episode.episodeNumber ?? offset + 1
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(episode.title ?? "قسمت \(episodeNumber)")
                                 .font(.subheadline.bold())
                             if let label = episode.versionLabel {
                                 Text(label)
-                                    .font(.caption2)
-                                    .foregroundStyle(episode.versionType == "dub" ? .blue : Theme.accent)
+                                    .font(.caption)
+                                    .foregroundStyle(episode.versionType == "dub" ? Theme.dubbed : Theme.accentText)
                             }
                         }
                         Spacer()
@@ -314,13 +363,20 @@ struct FilmDetailView: View {
                             Button {
                                 play(link, detail: detail, season: seasonNumber, episode: episodeNumber)
                             } label: {
-                                Image(systemName: "play.circle.fill").font(.title2)
+                                Image(systemName: "play.fill")
+                                    .font(.body.bold())
+                                    .frame(width: 40, height: 40)
+                                    .background(Theme.accent, in: Circle())
+                                    .foregroundStyle(.white)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
 
                     ForEach(Array(episode.link.enumerated()), id: \.offset) { _, link in
-                        downloadRow(link, paid: detail.isPaid)
+                        downloadRow(link, detail: detail,
+                                    target: .init(row: 0, season: seasonNumber, episode: episodeNumber,
+                                                  label: "فصل \(seasonNumber) · قسمت \(episodeNumber)"))
                     }
                 }
                 .padding()
@@ -335,6 +391,17 @@ struct FilmDetailView: View {
         if let best = episode.quality?.available.first { return best.url }
         // Hidden from guests: show the button so tapping it asks them to log in.
         return episode.hasOnlineLink ? "" : nil
+    }
+
+    private func firstEpisode(_ detail: FilmDetail) -> (link: String, season: Int, episode: Int)? {
+        for (index, season) in detail.serialDl.enumerated() {
+            for (offset, episode) in season.episode.enumerated() {
+                if let link = episodePlayLink(episode) {
+                    return (link, season.number(fallback: index), episode.episodeNumber ?? offset + 1)
+                }
+            }
+        }
+        return nil
     }
 
     /// The soft subtitle that belongs to a video link: from its online row or
@@ -385,52 +452,29 @@ struct FilmDetailView: View {
 
     // MARK: Rows
 
-    private func downloadRow(_ link: DownloadLink, paid: Bool) -> some View {
-        Menu {
-            switch appState.access(to: "download", paid: paid) {
-            case .needsLogin:
-                Button("برای دانلود وارد شوید") { showLogin = true }
-            case .needsSubscription:
-                Button("دانلود نیاز به اشتراک ویژه دارد") {
-                    notice = "دانلود این محتوا نیاز به اشتراک ویژه دارد."
-                }
-            case .allowed:
-                if let url = link.link.flatMap(URL.init(string:)) {
-                    if Playback.isNativelyPlayable(url) {
-                        Button { play(url.absoluteString, detail: detail) } label: {
-                            Label("پخش", systemImage: "play")
-                        }
-                    }
-                    Button { openURL(url) } label: {
-                        Label("دانلود با مرورگر", systemImage: "safari")
-                    }
-                    Button { UIPasteboard.general.string = url.absoluteString } label: {
-                        Label("کپی لینک", systemImage: "doc.on.doc")
-                    }
-                } else {
-                    Button("برای دانلود وارد شوید") { showLogin = true }
-                }
+    private func downloadRow(_ link: DownloadLink, detail: FilmDetail, target: DownloadTarget) -> some View {
+        // Subtitle files are attached to their video, not offered on their own.
+        let isSubtitleFile = link.link.map { ["vtt", "srt"].contains(URL(string: $0)?.pathExtension.lowercased() ?? "") } ?? false
+        return Group {
+            if !isSubtitleFile {
+                DownloadRow(link: link,
+                            onPlay: { url in
+                                play(url.absoluteString, detail: detail, season: target.season,
+                                     episode: target.episode, row: target.row)
+                            },
+                            onPlayOffline: { item in
+                                if let offline = DownloadManager.shared.playbackItem(for: item) {
+                                    playback = offline
+                                }
+                            },
+                            onDownload: { download(link, detail: detail, target: target) })
             }
-        } label: {
-            HStack {
-                Image(systemName: "arrow.down.circle")
-                Text(link.quality ?? "دانلود")
-                if let info = link.dlRowInfo ?? link.versionLabel {
-                    Text(info.plainText).foregroundStyle(Theme.muted)
-                }
-                Spacer()
-                if let size = link.size {
-                    Text(size).foregroundStyle(Theme.muted)
-                }
-            }
-            .font(.footnote)
-            .padding(.vertical, 6)
         }
     }
 
     private func actorsRow(_ actors: [Actor]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("بازیگران").font(.headline).padding(.horizontal)
+            SectionTitle(text: L("بازیگران", "Cast")).padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 14) {
                     ForEach(Array(actors.enumerated()), id: \.offset) { _, actor in
@@ -440,13 +484,15 @@ struct FilmDetailView: View {
                         } label: {
                             VStack(spacing: 6) {
                                 RemoteImage(url: URL(string: actor.image ?? ""))
-                                    .frame(width: 70, height: 70)
+                                    .frame(width: 72, height: 72)
                                     .clipShape(Circle())
+                                    .overlay(Circle().stroke(.white.opacity(0.1)))
                                 Text(actor.name ?? "")
-                                    .font(.caption2)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.9))
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
-                                    .frame(width: 80)
+                                    .frame(width: 82)
                             }
                         }
                         .buttonStyle(.plain)
@@ -463,7 +509,7 @@ struct FilmDetailView: View {
             if let percent = detail.userVote {
                 Label("رضایت کاربران: \(percent)", systemImage: "heart.fill")
                     .font(.footnote)
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.secondaryText)
             }
             Spacer()
             Button { Task { await vote("like") } } label: {
@@ -480,19 +526,19 @@ struct FilmDetailView: View {
     private func commentsPreview(_ detail: FilmDetail) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("نظرات").font(.headline)
+                SectionTitle(text: "نظرات")
                 Spacer()
                 NavigationLink {
                     CommentsView(postId: detail.id)
                 } label: {
                     Text(detail.comments.isEmpty ? "ثبت نظر" : "همه نظرات (\(detail.totalComments ?? detail.comments.count))")
-                        .font(.footnote)
+                        .font(.footnote.weight(.semibold))
                 }
             }
             if detail.comments.isEmpty {
                 Text("هنوز نظری ثبت نشده است.")
                     .font(.footnote)
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.secondaryText)
             }
             ForEach(detail.comments.prefix(3)) { comment in
                 CommentRow(comment: comment)
@@ -551,44 +597,227 @@ struct FilmDetailView: View {
         }
     }
 
-    private func play(_ link: String, detail: FilmDetail?, season: Int = 0, episode: Int = 0,
-                      row: Int = 0, startAt: Double = 0) {
-        guard let detail else { return }
-        switch appState.access(to: "playonline", paid: detail.isPaid) {
+    /// Checks the account against the site's rules; false when something blocks it.
+    private func allowed(_ feature: String, detail: FilmDetail) -> Bool {
+        switch appState.access(to: feature, paid: detail.isPaid) {
+        case .allowed:
+            return true
         case .needsLogin:
             showLogin = true
-            return
         case .needsSubscription:
-            notice = "برای تماشای این محتوا نیاز به اشتراک ویژه دارید."
-            return
-        case .allowed:
-            break
+            notice = feature == "download"
+                ? "دانلود این محتوا نیاز به اشتراک ویژه دارد."
+                : "برای تماشای این محتوا نیاز به اشتراک ویژه دارید."
+        case .unavailableInRegion:
+            notice = "Streaming isn't available in your region."
         }
+        return false
+    }
 
-        guard !link.isEmpty, let url = URL(string: link) else {
+    private func play(_ link: String, detail: FilmDetail?, season: Int = 0, episode: Int = 0,
+                      row: Int = 0, startAt: Double = 0) {
+        guard let detail, allowed("playonline", detail: detail) else { return }
+        guard var item = playbackItem(link, detail: detail, season: season, episode: episode,
+                                      row: row, startAt: startAt)
+        else {
             // An empty link means the server hid it: the session is no longer valid.
             showLogin = !appState.isSignedIn
             if appState.isSignedIn { notice = "لینک پخش در دسترس نیست." }
             return
         }
-
+        guard Playback.isNativelyPlayable(item.url) else {
+            notice = "این فرمت ویدیو در آیفون پخش نمی‌شود."
+            return
+        }
+        if detail.isSeries { item.upNext = upNext(after: season, episode: episode, detail: detail) }
         AppAnalytics.startedPlayback(id: detail.id, name: detail.displayName,
                                      contentType: detail.isSeries ? "series" : "film")
-        if Playback.isNativelyPlayable(url) {
-            playback = PlaybackItem(url: url,
-                                    title: detail.displayName,
-                                    postId: detail.id,
-                                    contentType: detail.isSeries ? "series" : "film",
-                                    seasonNo: season,
-                                    episodeNo: episode,
-                                    movieRowNo: row,
-                                    startAt: startAt,
-                                    subtitleURL: subtitleURL(for: link, in: detail),
-                                    posterURL: detail.posterURL)
-        } else if let external = Playback.externalPlayerURL(for: url) {
-            openURL(external)
+        playback = item
+    }
+
+    private func playbackItem(_ link: String, detail: FilmDetail, season: Int, episode: Int,
+                              row: Int, startAt: Double) -> PlaybackItem? {
+        guard !link.isEmpty, let url = URL(string: link) else { return nil }
+        return PlaybackItem(url: url,
+                            title: detail.displayName,
+                            postId: detail.id,
+                            contentType: detail.isSeries ? "series" : "film",
+                            seasonNo: season,
+                            episodeNo: episode,
+                            movieRowNo: row,
+                            startAt: startAt,
+                            subtitleURL: subtitleURL(for: link, in: detail),
+                            posterURL: detail.posterURL,
+                            sources: sources(for: link, in: detail, row: row))
+    }
+
+    /// The other qualities of the same video, for the player's quality menu.
+    private func sources(for link: String, in detail: FilmDetail, row: Int) -> [PlaybackSource] {
+        var options = filmPlayLinks(detail, row: row)
+        for season in detail.serialDl {
+            for episode in season.episode where episode.onlineLink == link
+                || (episode.quality?.available.contains { $0.url == link } ?? false) {
+                options = episode.quality?.available ?? []
+            }
+        }
+        let sources = options.compactMap { option in
+            URL(string: option.url).map { PlaybackSource(label: option.label, url: $0) }
+        }
+        return sources.contains { $0.url.absoluteString == link } ? sources : []
+    }
+
+    /// The episodes after this one in the same season, for "next episode".
+    private func upNext(after season: Int, episode: Int, detail: FilmDetail) -> [PlaybackItem] {
+        guard let current = detail.serialDl.enumerated()
+            .first(where: { $0.element.number(fallback: $0.offset) == season })?.element
+        else { return [] }
+        return current.episode.enumerated().compactMap { offset, next in
+            let number = next.episodeNumber ?? offset + 1
+            guard number > episode, let link = episodePlayLink(next) else { return nil }
+            return playbackItem(link, detail: detail, season: season, episode: number, row: 0, startAt: 0)
+        }
+    }
+
+    private func playTrailer(_ url: URL, detail: FilmDetail) {
+        if Playback.isNativelyPlayable(url), !url.pathExtension.isEmpty {
+            // postId 0: a trailer has no watch progress.
+            playback = PlaybackItem(url: url, title: "تریلر · \(detail.displayName)", postId: 0,
+                                    contentType: "trailer", posterURL: detail.posterURL)
         } else {
-            notice = "این فرمت ویدیو در پخش‌کننده آیفون پشتیبانی نمی‌شود. برای پخش، اپ VLC را نصب کنید."
+            webLink = WebLink(url: url, title: "تریلر")
+        }
+    }
+
+    private func download(_ link: DownloadLink, detail: FilmDetail, target: DownloadTarget) {
+        guard allowed("download", detail: detail) else { return }
+        guard let address = link.link, !address.isEmpty, let url = URL(string: address) else {
+            showLogin = !appState.isSignedIn
+            if appState.isSignedIn { notice = "لینک دانلود در دسترس نیست." }
+            return
+        }
+        DownloadManager.shared.start(DownloadItem(
+            postId: detail.id,
+            title: detail.displayName,
+            episodeLabel: target.label,
+            posterURL: detail.posterURL,
+            remoteURL: url,
+            remoteSubtitleURL: subtitleURL(for: address, in: detail),
+            quality: [link.quality, link.dlRowInfo?.plainText].compactMap { $0 }.joined(separator: " · "),
+            contentType: detail.isSeries ? "series" : "film",
+            seasonNo: target.season,
+            episodeNo: target.episode,
+            movieRowNo: target.row))
+        notice = "دانلود شروع شد. پیشرفت آن را در بخش «دانلودها» ببینید."
+    }
+}
+
+/// Where a download row belongs, for its watch progress and label.
+private struct DownloadTarget {
+    let row: Int
+    let season: Int
+    let episode: Int
+    let label: String?
+}
+
+/// A download link: quality and size, with play and download buttons. The
+/// address itself is never shown.
+private struct DownloadRow: View {
+    let link: DownloadLink
+    let onPlay: (URL) -> Void
+    let onPlayOffline: (DownloadItem) -> Void
+    let onDownload: () -> Void
+
+    @ObservedObject private var downloads = DownloadManager.shared
+
+    var body: some View {
+        let url = link.link.flatMap(URL.init(string:))
+        let saved = url.flatMap { downloads.item(for: $0) }
+
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(link.quality ?? "دانلود")
+                    .font(.footnote.bold())
+                HStack(spacing: 6) {
+                    if let info = link.dlRowInfo ?? link.versionLabel {
+                        Text(info.plainText).lineLimit(1)
+                    }
+                    if let size = link.size { Text(size) }
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+            }
+            Spacer(minLength: 4)
+
+            if let url, Playback.isNativelyPlayable(url), saved?.state != .completed {
+                iconButton("play.fill") { onPlay(url) }
+            }
+            stateButton(saved)
+        }
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private func stateButton(_ saved: DownloadItem?) -> some View {
+        switch saved?.state {
+        case .none:
+            iconButton("arrow.down", action: onDownload)
+        case .downloading:
+            Button { if let saved { downloads.pause(saved.id) } } label: {
+                ZStack {
+                    Circle().stroke(Theme.surfaceRaised, lineWidth: 3)
+                    Circle()
+                        .trim(from: 0, to: max(0.02, saved?.progress ?? 0))
+                        .stroke(Theme.accentText, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Image(systemName: "pause.fill").font(.caption2)
+                }
+                .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+        case .paused, .failed:
+            iconButton("arrow.clockwise") { if let saved { downloads.resume(saved.id) } }
+        case .completed:
+            Button { if let saved { onPlayOffline(saved) } } label: {
+                Label("آفلاین", systemImage: "checkmark.circle.fill")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.green.opacity(0.18), in: Capsule())
+                    .foregroundStyle(.green)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func iconButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.footnote.bold())
+                .frame(width: 34, height: 34)
+                .background(Theme.surfaceRaised, in: Circle())
+                .foregroundStyle(Theme.accentText)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A story that starts at five lines with a "more" toggle.
+private struct ExpandableText: View {
+    let text: String
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.white.opacity(0.88))
+                .lineSpacing(6)
+                .lineLimit(expanded ? nil : 5)
+            if text.count > 220 {
+                Button(expanded ? L("کمتر", "Less") : L("بیشتر", "More")) {
+                    withAnimation { expanded.toggle() }
+                }
+                .font(.footnote.bold())
+            }
         }
     }
 }

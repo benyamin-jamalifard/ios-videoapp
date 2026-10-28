@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// App colors. They follow the site's settings like the Android app does:
 /// `app_main_color` for the accent and the default palette of `theme` for the
@@ -7,8 +8,15 @@ enum Theme {
     private(set) static var background = Color(hex: "#141414")!
     private(set) static var surface = Color(hex: "#1c1c22")!
     private(set) static var surfaceRaised = Color(hex: "#23232b")!
+    /// Fills: buttons, selected chips, progress bars (white text sits on it).
     private(set) static var accent = Color("AccentColor")
+    /// The accent for text, icons and tint on the dark background. The site's
+    /// blue is too dark to read there, so it is lightened to WCAG AA (4.5:1).
+    private(set) static var accentText = readable(Color("AccentColor"), on: Color(hex: "#141414")!)
     private(set) static var muted = Color(hex: "#a4a4af")!
+    /// Secondary text that must stay readable on `surface` (captions, metadata).
+    static let secondaryText = Color.white.opacity(0.72)
+    static let dubbed = Color(hex: "#6cc4ff")!
     static let cornerRadius: CGFloat = 16
 
     private static let storageKey = "kf.themeColors"
@@ -39,6 +47,43 @@ enum Theme {
         if let color = Color(hex: colors["surfaceRaised"]) { surfaceRaised = color }
         if let color = Color(hex: colors["muted"]) { muted = color }
         if let color = Color(hex: colors["accent"]) { accent = color }
+        accentText = readable(accent, on: background)
+    }
+
+    /// Mixes `color` with white until it reaches a 4.5:1 contrast on `background`.
+    static func readable(_ color: Color, on background: Color) -> Color {
+        // Asset-catalog colors are dynamic; resolve them for the app's dark mode.
+        let dark = UITraitCollection(userInterfaceStyle: .dark)
+        let base = UIColor(color).resolvedColor(with: dark)
+        let backdrop = UIColor(background).resolvedColor(with: dark)
+        var mix: CGFloat = 0
+        var candidate = base
+        while contrast(candidate, backdrop) < 4.5 && mix < 1 {
+            mix += 0.05
+            candidate = blend(base, with: .white, amount: mix)
+        }
+        return Color(candidate)
+    }
+
+    private static func blend(_ color: UIColor, with other: UIColor, amount: CGFloat) -> UIColor {
+        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        color.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        return UIColor(red: r1 + (r2 - r1) * amount, green: g1 + (g2 - g1) * amount,
+                       blue: b1 + (b2 - b1) * amount, alpha: 1)
+    }
+
+    private static func contrast(_ a: UIColor, _ b: UIColor) -> CGFloat {
+        let (la, lb) = (luminance(a), luminance(b))
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    private static func luminance(_ color: UIColor) -> CGFloat {
+        var (r, g, b, a): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func linear(_ c: CGFloat) -> CGFloat { c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
     }
 }
 

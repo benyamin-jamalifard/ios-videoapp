@@ -14,7 +14,7 @@ struct WalletView: View {
             Section {
                 VStack(spacing: 6) {
                     Text("موجودی کیف پول").font(.footnote).foregroundStyle(Theme.muted)
-                    Text(Money.format(balance)).font(.title.bold()).foregroundStyle(Theme.accent)
+                    Text(Money.format(balance)).font(.title.bold()).foregroundStyle(Theme.accentText)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
@@ -238,7 +238,7 @@ private struct EntryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.title ?? (entry.isDebit ? "برداشت" : "واریز")).font(.subheadline)
                 if let date = entry.createdAt {
-                    Text(date).font(.caption2).foregroundStyle(Theme.muted)
+                    Text(date).font(.caption).foregroundStyle(Theme.muted)
                 }
             }
             Spacer()

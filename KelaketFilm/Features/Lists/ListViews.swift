@@ -331,7 +331,7 @@ struct AddToListSheet: View {
                                 if busy == list.id {
                                     ProgressView()
                                 } else if contains {
-                                    Image(systemName: "checkmark").foregroundStyle(Theme.accent)
+                                    Image(systemName: "checkmark").foregroundStyle(Theme.accentText)
                                 }
                             }
                         }

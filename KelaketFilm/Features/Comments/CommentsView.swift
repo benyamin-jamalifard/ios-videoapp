@@ -16,7 +16,7 @@ struct CommentRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(comment.commentAuthor ?? "کاربر").font(.subheadline.bold())
                     if let date = comment.commentDate {
-                        Text(date).font(.caption2).foregroundStyle(Theme.muted)
+                        Text(date).font(.caption).foregroundStyle(Theme.muted)
                     }
                 }
                 Spacer()

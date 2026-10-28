@@ -16,10 +16,10 @@ struct KelaketFilmApp: App {
             RootView()
                 .environmentObject(appState)
                 .environmentObject(router)
-                .environment(\.layoutDirection, .rightToLeft)
-                .environment(\.locale, Locale(identifier: "fa_IR"))
+                .environment(\.layoutDirection, appState.isInternational ? .leftToRight : .rightToLeft)
+                .environment(\.locale, Locale(identifier: appState.isInternational ? "en_US" : "fa_IR"))
                 .preferredColorScheme(.dark)
-                .tint(Theme.accent)
+                .tint(Theme.accentText)
                 .onOpenURL { router.open($0) }
         }
     }

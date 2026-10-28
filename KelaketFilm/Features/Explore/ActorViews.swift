@@ -32,7 +32,7 @@ struct ActorView: View {
 
             if let works {
                 if works.isEmpty {
-                    Text("اثری ثبت نشده است.").foregroundStyle(Theme.muted).padding(.top, 30)
+                    Text(L("اثری ثبت نشده است.", "No titles yet.")).foregroundStyle(Theme.muted).padding(.top, 30)
                 } else {
                     Text("\(works.count) اثر")
                         .font(.headline)
@@ -90,15 +90,15 @@ struct ActorsArchiveView: View {
             if pager.isLoading {
                 ProgressView().frame(maxWidth: .infinity).listRowBackground(Color.clear)
             } else if pager.isLoaded && pager.items.isEmpty {
-                Text(pager.error ?? "بازیگری پیدا نشد.")
+                Text(pager.error ?? L("بازیگری پیدا نشد.", "No actors found."))
                     .foregroundStyle(Theme.muted)
                     .listRowBackground(Color.clear)
             }
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("بازیگران")
-        .searchable(text: $search, prompt: "نام بازیگر")
+        .navigationTitle(L("بازیگران", "Actors"))
+        .searchable(text: $search, prompt: L("نام بازیگر", "Actor name"))
         .task(id: search) {
             let text = search.trimmingCharacters(in: .whitespaces)
             if !text.isEmpty {

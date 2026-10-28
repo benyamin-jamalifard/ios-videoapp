@@ -2,7 +2,6 @@ import SwiftUI
 
 struct NotificationsView: View {
     @EnvironmentObject private var appState: AppState
-    @Environment(\.openURL) private var openURL
     @State private var items: [AppNotification]?
     @State private var error: String?
 
@@ -54,7 +53,7 @@ struct NotificationsView: View {
                     Text(message).font(.footnote).foregroundStyle(.white.opacity(0.85))
                 }
                 if let date = item.createdAt {
-                    Text(date).font(.caption2).foregroundStyle(Theme.muted)
+                    Text(date).font(.caption).foregroundStyle(Theme.muted)
                 }
             }
             Spacer(minLength: 0)
@@ -77,7 +76,7 @@ struct NotificationsView: View {
             Task { try? await appState.api.markNotificationsRead(id: id) }
         }
         if let url = item.linkURL {
-            openURL(url)
+            AppRouter.shared.open(url)
         }
     }
 

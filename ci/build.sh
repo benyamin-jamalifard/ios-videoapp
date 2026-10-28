@@ -36,10 +36,18 @@ build() {
     build 2>&1 | tee -a build.log
 }
 
-# iPhone build, left unsigned: Sideloadly signs it with your Apple ID.
+# iPhone build. Sideloadly re-signs it with your Apple ID; an ad-hoc signature
+# on every framework and the app gives it a consistent bundle to re-sign
+# (a bare binary next to Google's half-signed frameworks fails on the device
+# with "No code signature found").
 build -configuration Release -sdk iphoneos -destination 'generic/platform=iOS'
 rm -rf Payload && mkdir Payload
 cp -R build/Build/Products/Release-iphoneos/KelaketFilm.app Payload/
+for framework in Payload/KelaketFilm.app/Frameworks/*.framework; do
+  [ -e "$framework" ] && codesign --force --sign - --timestamp=none "$framework"
+done
+codesign --force --sign - --timestamp=none --generate-entitlement-der Payload/KelaketFilm.app
+codesign --verify --deep --strict --verbose=2 Payload/KelaketFilm.app
 zip -qry KelaketFilm-unsigned.ipa Payload
 rm -rf Payload
 

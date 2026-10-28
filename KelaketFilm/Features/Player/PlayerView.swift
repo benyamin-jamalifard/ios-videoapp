@@ -13,6 +13,22 @@ struct PlayerView: View {
     var body: some View {
         PlayerControllerRepresentable(player: controller.player)
             .ignoresSafeArea()
+            .overlay(alignment: .bottom) {
+                if let cue = controller.currentCue {
+                    Text(cue.text)
+                        .font(.system(size: 19, weight: .semibold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black, radius: 2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 6))
+                        .environment(\.layoutDirection, .rightToLeft)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 70)
+                        .allowsHitTesting(false)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 Button {
                     dismiss()
@@ -35,9 +51,12 @@ struct PlayerView: View {
 @MainActor
 final class PlayerController: ObservableObject {
     let player: AVPlayer
+    @Published private(set) var currentCue: SubtitleCue?
     private let item: PlaybackItem
     private var api: APIClient?
     private var timeObserver: Any?
+    private var subtitleObserver: Any?
+    private var cues: [SubtitleCue] = []
     private var lastSavedPosition: Double = -1
 
     init(item: PlaybackItem) {
@@ -59,15 +78,35 @@ final class PlayerController: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in self?.saveProgress(reason: "interval") }
         }
+
+        if let subtitleURL = item.subtitleURL {
+            Task { await loadSubtitles(from: subtitleURL) }
+        }
     }
 
     func stop() {
         saveProgress(reason: "close")
         player.pause()
-        if let timeObserver {
-            player.removeTimeObserver(timeObserver)
+        for observer in [timeObserver, subtitleObserver].compactMap({ $0 }) {
+            player.removeTimeObserver(observer)
         }
         timeObserver = nil
+        subtitleObserver = nil
+    }
+
+    private func loadSubtitles(from url: URL) async {
+        cues = await Subtitles.load(from: url)
+        guard !cues.isEmpty, subtitleObserver == nil else { return }
+        subtitleObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            Task { @MainActor in
+                guard let self else { return }
+                let cue = Subtitles.cue(at: time.seconds, in: self.cues)
+                if cue != self.currentCue { self.currentCue = cue }
+            }
+        }
     }
 
     private func saveProgress(reason: String) {

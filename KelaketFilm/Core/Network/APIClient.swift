@@ -108,7 +108,8 @@ final class APIClient {
         }
         guard let url = components.url else { throw APIError.notConfigured }
 
-        var request = URLRequest(url: url, timeoutInterval: 30)
+        // Some routes are slow on the server (top 250 has taken over 40 s).
+        var request = URLRequest(url: url, timeoutInterval: 90)
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("ios", forHTTPHeaderField: "X-KELAKET-CLIENT")

@@ -12,6 +12,8 @@ struct PlaybackItem: Identifiable {
     var episodeNo = 0
     var movieRowNo = 0
     var startAt: Double = 0
+    /// The site's soft subtitle (.vtt/.srt) for this video, if it has one.
+    var subtitleURL: URL?
 }
 
 enum ContentAccess {

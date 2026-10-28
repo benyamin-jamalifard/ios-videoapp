@@ -55,7 +55,8 @@ struct RootView: View {
                isPresented: $showAdminMessage) {
             Button("باشه", role: .cancel) {}
         } message: {
-            Text(appState.config.adminMessage?.plainText ?? "")
+            // Admins write the message with Markdown bold, which an alert can't render.
+            Text(appState.config.adminMessage?.plainText.replacingOccurrences(of: "**", with: "") ?? "")
         }
     }
 }

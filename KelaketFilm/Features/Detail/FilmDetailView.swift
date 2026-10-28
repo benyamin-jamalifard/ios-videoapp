@@ -335,6 +335,37 @@ struct FilmDetailView: View {
         return episode.hasOnlineLink ? "" : nil
     }
 
+    /// The soft subtitle that belongs to a video link: from its online row or
+    /// episode, or a .vtt/.srt row in the same download group.
+    private func subtitleURL(for link: String, in detail: FilmDetail) -> URL? {
+        func isSubtitle(_ value: String) -> Bool {
+            let ext = URL(string: value)?.pathExtension.lowercased()
+            return ext == "vtt" || ext == "srt"
+        }
+        func matches(_ quality: QualityLinks?) -> Bool {
+            quality?.available.contains { option in option.url == link } ?? false
+        }
+        var found: String?
+        for group in detail.filmDl where found == nil {
+            let online = group.playonline.first { row in row.link == link || matches(row.quality) }
+            if let subtitle = online?.subtitle {
+                found = subtitle
+            } else if online != nil || group.data.contains(where: { row in row.link == link }) {
+                found = group.playonline.compactMap(\.subtitle).first
+                    ?? group.data.compactMap(\.link).first(where: isSubtitle)
+            }
+        }
+        for season in detail.serialDl where found == nil {
+            let episode = season.episode.first { episode in
+                episode.onlineLink == link
+                    || matches(episode.quality)
+                    || episode.link.contains { row in row.link == link }
+            }
+            found = episode?.subtitle
+        }
+        return found.flatMap(URL.init(string:))
+    }
+
     /// Finds the link to resume from the server-side watch progress.
     private func resumeLink(_ detail: FilmDetail, _ progress: WatchProgressItem) -> String? {
         if progress.contentType == "series" {
@@ -547,7 +578,8 @@ struct FilmDetailView: View {
                                     seasonNo: season,
                                     episodeNo: episode,
                                     movieRowNo: row,
-                                    startAt: startAt)
+                                    startAt: startAt,
+                                    subtitleURL: subtitleURL(for: link, in: detail))
         } else if let external = Playback.externalPlayerURL(for: url) {
             openURL(external)
         } else {

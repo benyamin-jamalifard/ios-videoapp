@@ -1,0 +1,9 @@
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.zip
+GoogleService-Info.plist
+.DS_Store
+*.local.md

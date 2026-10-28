@@ -1,0 +1,48 @@
+import Foundation
+
+/// A film/series card, as returned by featured, home categories, search,
+/// related posts and collections.
+struct Post: Decodable, Identifiable, Hashable {
+    let id: Int
+    @LossyString var name: String?
+    @LossyString var title: String?
+    @LossyString var enTitle: String?
+    @LossyString var poster: String?
+    @LossyString var posterFullsize: String?
+    /// Wide slider image (`slider_image`), only on featured posts.
+    @LossyString var poster2: String?
+    @LossyString var cover: String?
+    @LossyString var imdbRating: String?
+    @LossyString var sliderBadge: String?
+    @LossyString var lastEpisode: String?
+    @LossyString var story: String?
+    @LossyString var released: String?
+    @LossyString var badgeText: String?
+    @LossyString var badgeColor: String?
+    @LossyString var userVote: String?
+
+    var displayName: String {
+        name ?? title ?? enTitle ?? ""
+    }
+
+    var posterURL: URL? {
+        URL(string: poster ?? posterFullsize ?? "")
+    }
+
+    var wideImageURL: URL? {
+        URL(string: cover ?? poster2 ?? posterFullsize ?? poster ?? "")
+    }
+}
+
+struct Term: Decodable, Hashable, Identifiable {
+    @LossyInt var id: Int?
+    @LossyString var name: String?
+    @LossyString var slug: String?
+}
+
+struct Actor: Decodable, Hashable, Identifiable {
+    @LossyInt var id: Int?
+    @LossyString var name: String?
+    @LossyString var image: String?
+    @LossyString var bio: String?
+}

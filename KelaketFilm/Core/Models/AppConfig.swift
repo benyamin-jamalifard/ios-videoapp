@@ -18,6 +18,30 @@ struct AppConfig: Decodable {
 
     @LossyString var appLogo: String?
     @LossyString var appMainColor: String?
+    @LossyObject var theme: ThemeConfig?
+
+    /// The app color palettes from the theme settings.
+    struct ThemeConfig: Decodable, Hashable {
+        @LossyString var defaultPalette: String?
+        @LossyObject var palettes: [String: Palette]?
+
+        var defaultColors: Palette.Colors? {
+            guard let palettes else { return nil }
+            return (defaultPalette.flatMap { palettes[$0] } ?? palettes.values.first)?.colors
+        }
+
+        struct Palette: Decodable, Hashable {
+            @LossyObject var colors: Colors?
+
+            struct Colors: Decodable, Hashable {
+                @LossyString var primaryColor: String?
+                @LossyString var appBg: String?
+                @LossyString var surface1: String?
+                @LossyString var surface2: String?
+                @LossyString var mutedTextColor: String?
+            }
+        }
+    }
 
     @LossyBool var activeShare: Bool
     @LossyBool var showWeekly: Bool

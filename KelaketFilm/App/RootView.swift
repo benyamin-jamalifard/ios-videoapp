@@ -4,7 +4,6 @@ struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var router: AppRouter
     @Environment(\.openURL) private var openURL
-    @State private var showAdminMessage = false
 
     var body: some View {
         Group {
@@ -14,13 +13,14 @@ struct RootView: View {
                         .tabItem { Label("خانه", systemImage: "house.fill") }
                         .tag(AppTab.home)
 
-                    NavigationStack { ExploreView().withFilmDestination() }
-                        .tabItem { Label("کاوش", systemImage: "square.grid.2x2.fill") }
-                        .tag(AppTab.explore)
-
+                    // Same tabs, in the same order, as the Android app.
                     NavigationStack { SearchView().withFilmDestination() }
                         .tabItem { Label("جستجو", systemImage: "magnifyingglass") }
                         .tag(AppTab.search)
+
+                    NavigationStack { ExploreView().withFilmDestination() }
+                        .tabItem { Label("دسته بندی", systemImage: "square.grid.2x2.fill") }
+                        .tag(AppTab.explore)
 
                     if appState.config.activeBlog {
                         NavigationStack { BlogListView() }
@@ -32,9 +32,7 @@ struct RootView: View {
                         .tabItem { Label("پروفایل", systemImage: "person.crop.circle") }
                         .tag(AppTab.profile)
                 }
-                .onAppear {
-                    showAdminMessage = appState.config.adminMessage != nil
-                }
+                .tint(Theme.accent)
             } else {
                 SplashView()
             }
@@ -51,22 +49,16 @@ struct RootView: View {
             openURL(url)
             router.externalURL = nil
         }
-        .alert(appState.config.adminMessageTitle ?? "پیام",
-               isPresented: $showAdminMessage) {
-            Button("باشه", role: .cancel) {}
-        } message: {
-            // Admins write the message with Markdown bold, which an alert can't render.
-            Text(appState.config.adminMessage?.plainText.replacingOccurrences(of: "**", with: "") ?? "")
-        }
     }
 }
 
 private struct SplashView: View {
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "film.stack")
-                .font(.system(size: 56))
-                .foregroundStyle(Theme.accent)
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 160)
             ProgressView()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

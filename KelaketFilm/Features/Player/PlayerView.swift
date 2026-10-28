@@ -30,13 +30,18 @@ struct PlayerView: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                        .padding(12)
+                HStack(spacing: 12) {
+                    CastButton()
+                        .padding(10)
                         .background(.black.opacity(0.5), in: Circle())
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.headline)
+                            .padding(12)
+                            .background(.black.opacity(0.5), in: Circle())
+                    }
                 }
                 .padding()
             }
@@ -82,9 +87,18 @@ final class PlayerController: ObservableObject {
         if let subtitleURL = item.subtitleURL {
             Task { await loadSubtitles(from: subtitleURL) }
         }
+
+        // Picking a Cast device moves playback to the TV from the current position.
+        CastManager.shared.setMedia(.init(item: item,
+                                          position: { [weak player = self.player] in player?.currentTime().seconds ?? 0 },
+                                          onCastStarted: { [weak self] in
+                                              self?.saveProgress(reason: "close")
+                                              self?.player.pause()
+                                          }))
     }
 
     func stop() {
+        CastManager.shared.setMedia(nil)
         saveProgress(reason: "close")
         player.pause()
         for observer in [timeObserver, subtitleObserver].compactMap({ $0 }) {

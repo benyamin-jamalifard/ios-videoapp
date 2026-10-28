@@ -35,6 +35,7 @@ struct PosterCard: View {
                             .padding(6)
                     }
                 }
+                .overlay(alignment: .topTrailing) { PosterBadges(post: post).padding(6) }
                 .overlay(alignment: .bottom) {
                     if let badge = post.badgeText {
                         Text(badge)
@@ -54,6 +55,25 @@ struct PosterCard: View {
     }
 }
 
+/// The small subtitle (CC) and dub (mic) marks the Android app puts on posters.
+struct PosterBadges: View {
+    let post: Post
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if post.doble { badge("mic.fill") }
+            if post.def { badge("captions.bubble.fill") }
+        }
+    }
+
+    private func badge(_ icon: String) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 10, weight: .bold))
+            .frame(width: 22, height: 22)
+            .background(.black.opacity(0.6), in: Circle())
+    }
+}
+
 /// Rounds only the bottom corners (iOS 16 has no UnevenRoundedRectangle).
 private struct UnevenRoundedCorners: Shape {
     let radius: CGFloat
@@ -68,12 +88,32 @@ private struct UnevenRoundedCorners: Shape {
 struct PostRow: View {
     let title: String
     let posts: [Post]
+    /// Adds a "see all" link to the archive with this filter.
+    var seeAll: ArchiveFilter? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-                .padding(.horizontal)
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                if let seeAll {
+                    NavigationLink {
+                        ArchiveView(title: title, filter: seeAll)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("مشاهده همه")
+                            Image(systemName: "chevron.left").font(.caption2.bold())
+                        }
+                        .font(.caption)
+                        .foregroundStyle(Theme.muted)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Theme.surface, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(posts) { post in
@@ -117,7 +157,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 14)
             .background(Theme.accent.opacity(configuration.isPressed ? 0.7 : 1),
                         in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
-            .foregroundStyle(.black)
+            .foregroundStyle(.white)
     }
 }
 

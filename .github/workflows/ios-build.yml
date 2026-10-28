@@ -10,14 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The site address and API key come from the repository secrets
-      # KF_SITE_HOST and KF_API_KEY, so they never land in the code.
+      # The site address, API key and Firebase file come from repository
+      # secrets, so they never land in the code.
       - name: Build, package and take screenshots
         env:
           KF_SITE_HOST: ${{ secrets.KF_SITE_HOST }}
           KF_API_KEY: ${{ secrets.KF_API_KEY }}
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
           SAMPLE_POST_ID: ${{ vars.SAMPLE_POST_ID }}
-        run: bash ci/simulator-build.sh
+        run: bash ci/build.sh
 
       - name: Upload build log
         if: always()
@@ -25,6 +26,13 @@ jobs:
         with:
           name: build-log
           path: build.log
+
+      # Install on an iPhone with Sideloadly.
+      - name: Upload iPhone app
+        uses: actions/upload-artifact@v4
+        with:
+          name: KelaketFilm-ipa
+          path: KelaketFilm-unsigned.ipa
 
       # Upload this zip to appetize.io to run the app in a browser.
       - name: Upload simulator app

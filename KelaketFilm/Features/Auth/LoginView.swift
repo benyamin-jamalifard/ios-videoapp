@@ -109,7 +109,7 @@ private struct OTPLoginForm: View {
 
     @ViewBuilder
     private func progressLabel(_ title: String) -> some View {
-        if isLoading { ProgressView().tint(.black) } else { Text(title) }
+        if isLoading { ProgressView().tint(.white) } else { Text(title) }
     }
 
     private func requestCode() {
@@ -173,7 +173,7 @@ private struct PasswordLoginForm: View {
                 .fieldStyle()
 
             Button(action: login) {
-                if isLoading { ProgressView().tint(.black) } else { Text("ورود") }
+                if isLoading { ProgressView().tint(.white) } else { Text("ورود") }
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(username.isEmpty || password.isEmpty || isLoading)

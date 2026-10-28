@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @State private var showLogin = false
+    @State private var showRegister = false
 
     var body: some View {
         List {
@@ -90,7 +91,33 @@ struct ProfileView: View {
                 }
             } else {
                 Section {
-                    Button("ورود یا ثبت‌نام") { showLogin = true }
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Theme.muted)
+                            .frame(width: 96, height: 96)
+                            .background(Theme.surfaceRaised, in: Circle())
+                        Text("برای دسترسی به امکانات حساب کاربری، وارد شوید")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                        HStack(spacing: 12) {
+                            Button("ثبت نام") { showRegister = true }
+                                .buttonStyle(PrimaryButtonStyle())
+                            Button { showLogin = true } label: {
+                                Text("ورود")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius)
+                                        .stroke(Theme.muted.opacity(0.5)))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                Section {
                     NavigationLink { NotificationsView() } label: {
                         Label("اعلان‌ها", systemImage: "bell")
                     }
@@ -117,5 +144,15 @@ struct ProfileView: View {
         .navigationTitle("پروفایل")
         .refreshable { await appState.refreshSubscription() }
         .sheet(isPresented: $showLogin) { LoginView().environmentObject(appState) }
+        .sheet(isPresented: $showRegister) {
+            RegisterView { _ in
+                // Open the login form once the register sheet has gone.
+                Task {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    showLogin = true
+                }
+            }
+            .environmentObject(appState)
+        }
     }
 }

@@ -7,3 +7,7 @@ build/
 GoogleService-Info.plist
 .DS_Store
 *.local.md
+Pods/
+*.xcworkspace/
+Podfile.lock
+Payload/

@@ -20,6 +20,10 @@ struct Post: Decodable, Identifiable, Hashable {
     @LossyString var badgeText: String?
     @LossyString var badgeColor: String?
     @LossyString var userVote: String?
+    /// Has Persian subtitles (`def-version`).
+    @LossyBool var def: Bool
+    /// Has a Persian dub (`persian-doble`).
+    @LossyBool var doble: Bool
 
     var displayName: String {
         name ?? title ?? enTitle ?? ""

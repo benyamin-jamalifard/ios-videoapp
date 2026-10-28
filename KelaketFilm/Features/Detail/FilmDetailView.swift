@@ -71,7 +71,9 @@ struct FilmDetailView: View {
 
     private func load() async {
         do {
-            detail = try await appState.api.film(id: id)
+            let loaded = try await appState.api.film(id: id)
+            if detail == nil { AppAnalytics.viewedTitle(id: loaded.id, name: loaded.displayName) }
+            detail = loaded
             error = nil
         } catch {
             if detail == nil { self.error = error.localizedDescription }
@@ -570,6 +572,8 @@ struct FilmDetailView: View {
             return
         }
 
+        AppAnalytics.startedPlayback(id: detail.id, name: detail.displayName,
+                                     contentType: detail.isSeries ? "series" : "film")
         if Playback.isNativelyPlayable(url) {
             playback = PlaybackItem(url: url,
                                     title: detail.displayName,
@@ -579,7 +583,8 @@ struct FilmDetailView: View {
                                     episodeNo: episode,
                                     movieRowNo: row,
                                     startAt: startAt,
-                                    subtitleURL: subtitleURL(for: link, in: detail))
+                                    subtitleURL: subtitleURL(for: link, in: detail),
+                                    posterURL: detail.posterURL)
         } else if let external = Playback.externalPlayerURL(for: url) {
             openURL(external)
         } else {

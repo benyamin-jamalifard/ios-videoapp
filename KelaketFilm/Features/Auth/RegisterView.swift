@@ -34,7 +34,7 @@ struct RegisterView: View {
                         .fieldStyle()
 
                     Button(action: register) {
-                        if isLoading { ProgressView().tint(.black) } else { Text("ثبت‌نام") }
+                        if isLoading { ProgressView().tint(.white) } else { Text("ثبت‌نام") }
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(username.isEmpty || email.isEmpty || password.isEmpty || isLoading)

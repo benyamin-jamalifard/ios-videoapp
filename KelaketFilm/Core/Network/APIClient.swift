@@ -47,16 +47,25 @@ final class APIClient {
 
     var userToken: String?
 
-    private let baseURL: URL?
+    /// The address built into the app; used when the address file can't be read.
+    let defaultHost: String?
+    private let hostListURL: URL?
+    private let lock = NSLock()
+    private var _baseURL: URL?
     private let apiKey: String
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
+    private static let cachedHostKey = "kf.siteHost"
+
     init(bundle: Bundle = .main, session: URLSession = .shared) {
         let host = (bundle.object(forInfoDictionaryKey: "KFSiteHost") as? String ?? "")
             .trimmingCharacters(in: .whitespaces)
-        baseURL = host.isEmpty || host == "example.com" ? nil : URL(string: "https://\(host)/wp-json/")
+        defaultHost = host.isEmpty || host == "example.com" ? nil : host
+        let list = (bundle.object(forInfoDictionaryKey: "KFHostListURL") as? String ?? "")
+            .trimmingCharacters(in: .whitespaces)
+        hostListURL = list.isEmpty ? nil : URL(string: list.contains("://") ? list : "https://\(list)")
         apiKey = bundle.object(forInfoDictionaryKey: "KFApiKey") as? String ?? ""
         self.session = session
 
@@ -64,10 +73,57 @@ final class APIClient {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
+
+        // Start from the last address that worked, then the built-in one.
+        let cached = UserDefaults.standard.string(forKey: Self.cachedHostKey)
+        _baseURL = Self.apiURL(host: cached ?? defaultHost)
+    }
+
+    private var baseURL: URL? {
+        lock.lock()
+        defer { lock.unlock() }
+        return _baseURL
     }
 
     var siteURL: URL? {
         baseURL?.deletingLastPathComponent()
+    }
+
+    var currentHost: String? { baseURL?.host }
+
+    /// Points every request at `host` and remembers it for the next launch.
+    func useHost(_ host: String) {
+        guard let url = Self.apiURL(host: host) else { return }
+        lock.lock()
+        _baseURL = url
+        lock.unlock()
+        UserDefaults.standard.set(url.host, forKey: Self.cachedHostKey)
+    }
+
+    /// Anti-filter: the site's current address is published in a small text
+    /// file (the same one the Android app reads), e.g. "https://onlinegmo.xyz".
+    /// Returns the host found there, or nil when it can't be read.
+    func fetchPublishedHost() async -> String? {
+        guard let hostListURL else { return nil }
+        var request = URLRequest(url: hostListURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+        request.setValue("text/plain", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let text = String(data: data, encoding: .utf8)
+        else { return nil }
+        let line = text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty } ?? ""
+        let host = URL(string: line.contains("://") ? line : "https://\(line)")?.host
+        return host?.contains(".") == true ? host : nil
+    }
+
+    private static func apiURL(host: String?) -> URL? {
+        guard let host, !host.isEmpty else { return nil }
+        let bare = host.replacingOccurrences(of: "https://", with: "")
+            .replacingOccurrences(of: "http://", with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        return URL(string: "https://\(bare)/wp-json/")
     }
 
     func send<T: Decodable>(_ endpoint: Endpoint, as type: T.Type = T.self) async throws -> T {

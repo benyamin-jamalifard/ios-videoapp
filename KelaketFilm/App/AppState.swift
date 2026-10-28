@@ -16,6 +16,7 @@ final class AppState: ObservableObject {
 
     init(api: APIClient = .shared) {
         self.api = api
+        Theme.restore()
         token = Keychain.string(for: Self.tokenKey)
         api.userToken = token
         if let data = UserDefaults.standard.data(forKey: Self.userKey) {
@@ -29,7 +30,17 @@ final class AppState: ObservableObject {
     var userId: Int? { user?.id ?? subscription?.id }
 
     func bootstrap() async {
-        if let config = try? await api.config() {
+        if let host = await api.fetchPublishedHost(), host != api.currentHost {
+            api.useHost(host)
+        }
+        var config = try? await api.config()
+        // The published or cached address is down: fall back to the built-in one.
+        if config == nil, let fallback = api.defaultHost, fallback != api.currentHost {
+            api.useHost(fallback)
+            config = try? await api.config()
+        }
+        if let config {
+            Theme.apply(config)
             self.config = config
         }
         isConfigLoaded = true
@@ -39,6 +50,7 @@ final class AppState: ObservableObject {
     /// Stores the JWT from a successful OTP or password login.
     func signIn(with response: AuthResponse) {
         guard let token = response.token else { return }
+        AppAnalytics.signedIn(method: config.usesOTP ? "otp" : "password")
         self.token = token
         api.userToken = token
         Keychain.set(token, for: Self.tokenKey)

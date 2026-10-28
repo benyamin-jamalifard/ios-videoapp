@@ -32,6 +32,7 @@ struct SearchView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle("جستجو")
         .searchable(text: $query, prompt: "نام فیلم یا سریال")
+        .onSubmit(of: .search) { AppAnalytics.searched(query.trimmingCharacters(in: .whitespaces)) }
         // Debounced: the task restarts on every keystroke and only fires after a pause.
         .task(id: query) {
             let text = query.trimmingCharacters(in: .whitespaces)

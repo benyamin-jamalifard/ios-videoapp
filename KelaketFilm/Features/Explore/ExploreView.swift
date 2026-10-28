@@ -1,98 +1,128 @@
 import SwiftUI
 
-/// Entry point for browsing: archive, charts, schedule, lists, actors and genres.
+/// The "دسته بندی" tab, laid out like the Android app: post-type chips over a
+/// grid of genre cards, plus the sections the Android side menu links to.
 struct ExploreView: View {
     @EnvironmentObject private var appState: AppState
     @State private var genres: [Genre] = []
+    @State private var postTypes: [FilterTerm] = []
+    @State private var selectedType: Int?
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    tile("همه فیلم‌ها و سریال‌ها", icon: "square.grid.2x2") {
-                        ArchiveView(title: "آرشیو")
-                    }
-                    tile("۲۵۰ برتر IMDb", icon: "trophy") { Top250View() }
-                    tile("کالکشن‌ها", icon: "square.stack.3d.up") { CollectionsView() }
-                    tile("لیست‌های کاربران", icon: "list.star") { PublicListsView() }
-                    if appState.config.showWeekly {
-                        tile("برنامه پخش هفتگی", icon: "calendar") { WeeklyScheduleView() }
-                    }
-                    if appState.config.kelaketappShowBoxoffice {
-                        tile("باکس‌آفیس", icon: "chart.bar") { BoxOfficeView() }
-                    }
-                    if appState.config.kelaketappShowActorsArchive {
-                        tile("بازیگران", icon: "person.2") { ActorsArchiveView() }
+            VStack(alignment: .leading, spacing: 20) {
+                if !postTypes.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            chip("همه", selected: selectedType == nil) { selectedType = nil }
+                            ForEach(postTypes) { type in
+                                chip(type.termName ?? "", selected: selectedType == type.termId) {
+                                    selectedType = type.termId
+                                }
+                            }
+                        }
+                        .padding(6)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))
+                        .padding(.horizontal)
                     }
                 }
-                .padding(.horizontal)
 
-                if !genres.isEmpty {
-                    Text("ژانرها").font(.headline).padding(.horizontal)
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(genres) { genre in
-                            NavigationLink {
-                                ArchiveView(title: genre.title ?? "", filter: ArchiveFilter(genre: genre.id))
-                            } label: {
-                                genreCard(genre)
-                            }
-                            .buttonStyle(.plain)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        shortcut("آرشیو", icon: "square.grid.2x2") {
+                            ArchiveView(title: "آرشیو", filter: ArchiveFilter(postType: selectedType))
                         }
+                        if appState.config.kelaketappShowActorsArchive {
+                            shortcut("آرشیو بازیگران", icon: "person.2") { ActorsArchiveView() }
+                        }
+                        if appState.config.showWeekly {
+                            shortcut("جدول پخش سریال‌ها", icon: "calendar.badge.clock") { WeeklyScheduleView() }
+                        }
+                        if appState.config.kelaketappShowBoxoffice {
+                            shortcut("باکس آفیس", icon: "chart.line.uptrend.xyaxis") { BoxOfficeView() }
+                        }
+                        shortcut("۲۵۰ برتر IMDb", icon: "trophy") { Top250View() }
+                        shortcut("کالکشن‌ها", icon: "square.stack.3d.up") { CollectionsView() }
+                        shortcut("لیست‌های کاربران", icon: "list.star") { PublicListsView() }
                     }
                     .padding(.horizontal)
                 }
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(genres) { genre in
+                        NavigationLink {
+                            ArchiveView(title: genre.title ?? "",
+                                        filter: ArchiveFilter(postType: selectedType, genre: genre.id))
+                        } label: {
+                            genreCard(genre)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
             }
             .padding(.vertical)
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("کاوش")
+        .navigationTitle("دسته بندی")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             if genres.isEmpty, let result = try? await appState.api.genres() {
                 genres = result.filter { ($0.count ?? 1) > 0 }
             }
+            if postTypes.isEmpty, let terms = try? await appState.api.searchTerms() {
+                postTypes = terms.postType
+            }
         }
     }
 
-    private func tile<Destination: View>(_ title: String, icon: String,
-                                         @ViewBuilder destination: @escaping () -> Destination) -> some View {
+    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.bold())
+                .padding(.horizontal, 16).padding(.vertical, 9)
+                .background(selected ? Theme.accent : Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 16))
+                .foregroundStyle(selected ? .white : Theme.muted)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func shortcut<Destination: View>(_ title: String, icon: String,
+                                             @ViewBuilder destination: @escaping () -> Destination) -> some View {
         NavigationLink {
             destination()
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.title3)
                     .foregroundStyle(Theme.accent)
-                Text(title)
-                    .font(.subheadline.bold())
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
+                    .frame(width: 30, height: 30)
+                    .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
+                Text(title).font(.footnote.bold())
             }
-            .padding()
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .padding(.vertical, 8).padding(.horizontal, 12)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
         }
         .buttonStyle(.plain)
     }
 
     private func genreCard(_ genre: Genre) -> some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .bottom) {
             if let url = genre.image?.url {
                 RemoteImage(url: url)
             } else {
                 Theme.surfaceRaised
             }
-            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: 2) {
+            LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: 6) {
                 Text(genre.title ?? "").font(.subheadline.bold())
-                if let count = genre.count {
-                    Text("\(count) عنوان").font(.caption2).foregroundStyle(Theme.muted)
-                }
+                Capsule().fill(Theme.accent).frame(width: 30, height: 3)
             }
-            .padding(10)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 80)
+        .frame(height: 110)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
     }
 }

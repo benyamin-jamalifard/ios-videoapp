@@ -1,12 +1,15 @@
 // تنظیمات اختصاصی هر سایت — قبل از بیلد این مقادیر را عوض کنید.
 // نکته: در xcconfig دو اسلش (//) کامنت حساب می‌شود، برای همین فقط دامنه را بنویسید (بدون https://).
 
-APP_DISPLAY_NAME = کلاکت فیلم
+APP_DISPLAY_NAME = گیت مووی
 KF_BUNDLE_ID = com.gitemovie.app
 KF_TEAM_ID =
 
-// دامنه سایت وردپرسی که افزونه kelaketfilm-app روی آن نصب است
+// دامنه سایت وردپرسی که افزونه kelaketfilm-app روی آن نصب است (اگر فایل آدرس خوانده نشد از این استفاده می‌شود)
 KF_SITE_HOST = mizbancinema.ir
+
+// ضدفیلتر: فایلی که آدرس فعلی سایت در آن است و اپ هر بار اجرا آن را می‌خواند (بدون https://)
+KF_HOST_LIST_URL = mizban.s3.ir-central1.arvanstorage.ir/url.txt
 
 // همان «API Key» تنظیمات افزونه اپلیکیشن (اگر «نادیده گرفتن API Key» روشن است خالی بگذارید)
 KF_API_KEY =

@@ -30,8 +30,20 @@ struct HomeView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("کلاکت فیلم")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 6) {
+                    Image("Logo").resizable().scaledToFit().frame(height: 30)
+                    Text(Bundle.main.displayName).font(.headline)
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink { NotificationsView() } label: {
+                    Image(systemName: "bell")
+                }
+            }
+        }
         // Reload when the session changes so "continue watching" follows the user.
         .task(id: appState.token) { await model.load(api: appState.api) }
     }
@@ -41,6 +53,26 @@ struct HomeView: View {
             LazyVStack(alignment: .leading, spacing: 28) {
                 if !home.featuredFilms.isEmpty {
                     FeaturedSlider(posts: home.featuredFilms)
+                }
+
+                if appState.config.showWeekly {
+                    NavigationLink { WeeklyScheduleView() } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accent)
+                            Text("برنامه پخش هفتگی سریال‌ها").font(.subheadline.bold())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+                        .padding(.horizontal)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if let message = appState.config.adminMessage {
+                    AdminMessageCard(title: appState.config.adminMessageTitle, message: message)
                 }
 
                 let shortcuts = appState.config.customMenuList.filter { $0.archiveFilter != nil }
@@ -75,7 +107,8 @@ struct HomeView: View {
 
                 ForEach(home.selectedCats) { category in
                     if !category.data.isEmpty {
-                        PostRow(title: category.catName ?? "", posts: category.data)
+                        PostRow(title: category.catName ?? "", posts: category.data,
+                                seeAll: category.archiveFilter)
                     }
                 }
             }
@@ -89,42 +122,54 @@ private struct FeaturedSlider: View {
     let posts: [Post]
     @State private var selection = 0
 
+    /// The "modern" slider of the Android app: the poster in the middle over a
+    /// blurred copy of itself, with the title and rating/year under it.
     var body: some View {
         TabView(selection: $selection) {
             ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
                 NavigationLink(value: FilmRoute(id: post.id)) {
-                    ZStack(alignment: .bottomLeading) {
-                        RemoteImage(url: post.wideImageURL)
-                        LinearGradient(colors: [.clear, .black.opacity(0.85)],
-                                       startPoint: .center, endPoint: .bottom)
-                        VStack(alignment: .leading, spacing: 4) {
-                            if let badge = post.sliderBadge {
-                                Text(badge)
-                                    .font(.caption.bold())
-                                    .padding(.horizontal, 8).padding(.vertical, 3)
-                                    .background(Theme.accent, in: Capsule())
-                                    .foregroundStyle(.black)
-                            }
-                            Text(post.displayName)
-                                .font(.title3.bold())
-                                .lineLimit(1)
+                    VStack(spacing: 12) {
+                        RemoteImage(url: post.posterURL)
+                            .frame(width: 190, height: 280)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .overlay(alignment: .topLeading) { PosterBadges(post: post).padding(8) }
+                            .shadow(color: .black.opacity(0.5), radius: 16, y: 8)
+                        Text(post.displayName)
+                            .font(.title3.bold())
+                            .lineLimit(1)
+                            .padding(.horizontal, 24)
+                        HStack(spacing: 10) {
                             if let rating = post.imdbRating {
-                                Label("IMDb \(rating)", systemImage: "star.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.muted)
+                                Text(rating).foregroundStyle(.yellow)
                             }
+                            if post.imdbRating != nil && post.released != nil {
+                                Text("|").foregroundStyle(Theme.muted)
+                            }
+                            if let year = post.released { Text(year) }
                         }
-                        .padding()
+                        .font(.caption.bold())
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
-                    .padding(.horizontal)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
                 .tag(index)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .always))
-        .frame(height: 220)
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: 400)
+        .background {
+            // Blurred backdrop of the current poster, fading into the page.
+            if posts.indices.contains(selection) {
+                RemoteImage(url: posts[selection].wideImageURL ?? posts[selection].posterURL)
+                    .blur(radius: 30)
+                    .overlay(LinearGradient(colors: [.black.opacity(0.2), Theme.background],
+                                            startPoint: .top, endPoint: .bottom))
+                    .clipped()
+                    .animation(.easeInOut, value: selection)
+            }
+        }
         .task(id: posts.count) {
             // Auto-advance every 5 seconds.
             while !Task.isCancelled && posts.count > 1 {
@@ -132,6 +177,38 @@ private struct FeaturedSlider: View {
                 withAnimation { selection = (selection + 1) % posts.count }
             }
         }
+    }
+}
+
+/// The admin's notice, shown as a card like the Android app (not a pop-up).
+private struct AdminMessageCard: View {
+    let title: String?
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "megaphone.fill").foregroundStyle(Theme.accent)
+                if let title { Text(title).font(.subheadline.bold()) }
+            }
+            Text(Self.markdown(message.plainText))
+                .font(.footnote)
+                .lineSpacing(5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding()
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+        .overlay(alignment: .trailing) {
+            // Accent strip on the leading (right, in RTL) edge.
+            RoundedRectangle(cornerRadius: 2).fill(Theme.accent).frame(width: 3).padding(.vertical, 12)
+        }
+        .padding(.horizontal)
+    }
+
+    /// Admins write **bold** in the message; render it instead of showing asterisks.
+    private static func markdown(_ text: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
     }
 }
 

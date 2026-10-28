@@ -1,13 +1,15 @@
 # Codemagic build (free Mac minutes). Set KF_SITE_HOST, KF_API_KEY and,
-# optionally, SAMPLE_POST_ID in an environment group named "kelaket"
-# (Codemagic app → Environment variables), marked Secure.
+# optionally, GOOGLE_SERVICE_INFO_PLIST (base64) and SAMPLE_POST_ID in an
+# environment group named "kelaket" (Codemagic app → Environment variables),
+# marked Secure.
 workflows:
-  ios-simulator:
-    name: iOS simulator build
+  ios:
+    name: iOS build
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       xcode: latest
+      cocoapods: default
       groups:
         - kelaket
     triggering:
@@ -15,8 +17,9 @@ workflows:
         - push
     scripts:
       - name: Build, package and take screenshots
-        script: bash ci/simulator-build.sh
+        script: bash ci/build.sh
     artifacts:
       - build.log
+      - KelaketFilm-unsigned.ipa
       - KelaketFilm-simulator.zip
       - screenshots/*

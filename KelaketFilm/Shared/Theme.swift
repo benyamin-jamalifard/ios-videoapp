@@ -1,12 +1,52 @@
 import SwiftUI
 
+/// App colors. They follow the site's settings like the Android app does:
+/// `app_main_color` for the accent and the default palette of `theme` for the
+/// rest. The last colors are kept so the next launch starts in them.
 enum Theme {
-    static let background = Color(red: 0.05, green: 0.05, blue: 0.06)
-    static let surface = Color(red: 0.11, green: 0.11, blue: 0.13)
-    static let surfaceRaised = Color(red: 0.16, green: 0.16, blue: 0.19)
-    static let accent = Color("AccentColor")
-    static let muted = Color.white.opacity(0.6)
-    static let cornerRadius: CGFloat = 12
+    private(set) static var background = Color(hex: "#141414")!
+    private(set) static var surface = Color(hex: "#1c1c22")!
+    private(set) static var surfaceRaised = Color(hex: "#23232b")!
+    private(set) static var accent = Color("AccentColor")
+    private(set) static var muted = Color(hex: "#a4a4af")!
+    static let cornerRadius: CGFloat = 16
+
+    private static let storageKey = "kf.themeColors"
+
+    /// Call once at launch, before any view reads a color.
+    static func restore() {
+        guard let saved = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: String] else { return }
+        set(saved)
+    }
+
+    static func apply(_ config: AppConfig) {
+        var colors: [String: String] = [:]
+        if let palette = config.theme?.defaultColors {
+            colors["background"] = palette.appBg
+            colors["surface"] = palette.surface1
+            colors["surfaceRaised"] = palette.surface2
+            colors["muted"] = palette.mutedTextColor
+            colors["accent"] = palette.primaryColor
+        }
+        if let main = config.appMainColor { colors["accent"] = main }
+        set(colors)
+        UserDefaults.standard.set(colors, forKey: storageKey)
+    }
+
+    private static func set(_ colors: [String: String]) {
+        if let color = Color(hex: colors["background"]) { background = color }
+        if let color = Color(hex: colors["surface"]) { surface = color }
+        if let color = Color(hex: colors["surfaceRaised"]) { surfaceRaised = color }
+        if let color = Color(hex: colors["muted"]) { muted = color }
+        if let color = Color(hex: colors["accent"]) { accent = color }
+    }
+}
+
+extension Bundle {
+    /// The app's name as shown under its icon.
+    var displayName: String {
+        object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? ""
+    }
 }
 
 extension Color {

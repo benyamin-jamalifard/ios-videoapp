@@ -1,30 +1,50 @@
 #!/usr/bin/env bash
-# Builds the app for the iOS simulator, zips it for appetize.io and takes
-# screenshots. Shared by GitHub Actions and Codemagic.
+# CI build, shared by GitHub Actions and Codemagic. Produces:
+#   KelaketFilm-unsigned.ipa   install on an iPhone with Sideloadly (from Windows)
+#   KelaketFilm-simulator.zip  run in a browser on appetize.io
+#   screenshots/               the app in the simulator
 #
 # Optional environment: KF_SITE_HOST, KF_API_KEY (override Config.xcconfig),
-# SAMPLE_POST_ID (also screenshots that film's page).
+# GOOGLE_SERVICE_INFO_PLIST (base64 of GoogleService-Info.plist, turns on
+# Firebase), SAMPLE_POST_ID (also screenshots that film's page).
 set -euo pipefail
 
 command -v xcodegen >/dev/null || brew install xcodegen
+command -v pod >/dev/null || sudo gem install cocoapods
+
+if [ -n "${GOOGLE_SERVICE_INFO_PLIST:-}" ]; then
+  echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > KelaketFilm/Resources/GoogleService-Info.plist
+fi
+
 xcodegen generate
+pod install --repo-update
 
 overrides=()
 [ -n "${KF_SITE_HOST:-}" ] && overrides+=("KF_SITE_HOST=$KF_SITE_HOST")
 [ -n "${KF_API_KEY:-}" ] && overrides+=("KF_API_KEY=$KF_API_KEY")
 
-xcodebuild \
-  -project KelaketFilm.xcodeproj \
-  -scheme KelaketFilm \
-  -configuration Debug \
-  -sdk iphonesimulator \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath build \
-  CODE_SIGNING_ALLOWED=NO \
-  ${overrides[@]+"${overrides[@]}"} \
-  build 2>&1 | tee build.log
+build() {
+  xcodebuild \
+    -workspace KelaketFilm.xcworkspace \
+    -scheme KelaketFilm \
+    -derivedDataPath build \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGN_IDENTITY="" \
+    ${overrides[@]+"${overrides[@]}"} \
+    "$@" \
+    build 2>&1 | tee -a build.log
+}
 
-# Upload this zip to appetize.io to run the app in a browser.
+# iPhone build, left unsigned: Sideloadly signs it with your Apple ID.
+build -configuration Release -sdk iphoneos -destination 'generic/platform=iOS'
+rm -rf Payload && mkdir Payload
+cp -R build/Build/Products/Release-iphoneos/KelaketFilm.app Payload/
+zip -qry KelaketFilm-unsigned.ipa Payload
+rm -rf Payload
+
+# Simulator build for appetize.io and the screenshots.
+build -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
 APP=build/Build/Products/Debug-iphonesimulator/KelaketFilm.app
 (cd "$(dirname "$APP")" && zip -qry "$OLDPWD/KelaketFilm-simulator.zip" KelaketFilm.app)
 

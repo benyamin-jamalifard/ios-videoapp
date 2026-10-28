@@ -44,7 +44,14 @@ build -configuration Release -sdk iphoneos -destination 'generic/platform=iOS'
 rm -rf Payload && mkdir Payload
 cp -R build/Build/Products/Release-iphoneos/KelaketFilm.app Payload/
 for framework in Payload/KelaketFilm.app/Frameworks/*.framework; do
-  [ -e "$framework" ] && codesign --force --sign - --timestamp=none "$framework"
+  [ -e "$framework" ] || continue
+  # Google ships these as fat files holding one arm64 slice; a signed Xcode
+  # build thins them on embed, an unsigned one does not.
+  binary="$framework/$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$framework/Info.plist")"
+  if lipo -info "$binary" | grep -q '^Architectures in the fat file'; then
+    lipo "$binary" -thin arm64 -output "$binary.thin" && mv "$binary.thin" "$binary"
+  fi
+  codesign --force --sign - --timestamp=none "$framework"
 done
 codesign --force --sign - --timestamp=none --generate-entitlement-der Payload/KelaketFilm.app
 codesign --verify --deep --strict --verbose=2 Payload/KelaketFilm.app

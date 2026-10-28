@@ -15,7 +15,7 @@
    pod install
    open KelaketFilm.xcworkspace
    ```
-3. بدون مک: [ci/build.sh](ci/build.sh) روی GitHub Actions یا Codemagic اجرا می‌شود و IPA بدون امضا (برای Sideloadly)، نسخه شبیه‌ساز (برای appetize.io) و عکس صفحه‌ها می‌سازد. برای IPA امضاشده (TestFlight و App Store) حساب Apple Developer لازم است.
+3. بدون مک: [ci/build.sh](ci/build.sh) روی Codemagic اجرا می‌شود و IPA بدون امضا (برای Sideloadly)، نسخه شبیه‌ساز (برای appetize.io) و عکس صفحه‌ها می‌سازد. برای IPA امضاشده (TestFlight و App Store) حساب Apple Developer لازم است.
 
 ## ساختار
 
@@ -90,7 +90,7 @@
 
 ### نصب روی آیفون بدون Mac
 
-بیلد (GitHub Actions یا Codemagic) فایل `KelaketFilm-unsigned.ipa` می‌سازد. با برنامه **Sideloadly** روی ویندوز و Apple ID رایگان روی آیفون نصب کنید. با Apple ID رایگان اپ ۷ روز اعتبار دارد و پوش نوتیفیکیشن کار نمی‌کند؛ با حساب Apple Developer این محدودیت‌ها نیست.
+بیلد Codemagic فایل `KelaketFilm-unsigned.ipa` می‌سازد. با برنامه **Sideloadly** روی ویندوز و Apple ID رایگان روی آیفون نصب کنید. با Apple ID رایگان اپ ۷ روز اعتبار دارد و پوش نوتیفیکیشن کار نمی‌کند؛ با حساب Apple Developer این محدودیت‌ها نیست.
 
 ### Firebase
 

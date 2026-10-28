@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI build, shared by GitHub Actions and Codemagic. Produces:
+# CI build, run by Codemagic (codemagic.yaml). Produces:
 #   KelaketFilm-unsigned.ipa   install on an iPhone with Sideloadly (from Windows)
 #   KelaketFilm-simulator.zip  run in a browser on appetize.io
 #   screenshots/               the app in the simulator

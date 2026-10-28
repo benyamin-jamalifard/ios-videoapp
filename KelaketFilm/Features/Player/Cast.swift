@@ -63,15 +63,16 @@ final class CastManager: NSObject {
 
         // The default receiver shows WebVTT tracks (the subtitle host must allow CORS).
         let options = GCKMediaLoadOptions()
-        if let subtitle = item.subtitleURL, subtitle.pathExtension.lowercased() == "vtt" {
-            builder.mediaTracks = [GCKMediaTrack(identifier: 1,
-                                                 contentIdentifier: subtitle.absoluteString,
-                                                 contentType: "text/vtt",
-                                                 type: .text,
-                                                 textSubtype: .subtitles,
-                                                 name: "فارسی",
-                                                 languageCode: "fa",
-                                                 customData: nil)]
+        if let subtitle = item.subtitleURL, subtitle.pathExtension.lowercased() == "vtt",
+           let track = GCKMediaTrack(identifier: 1,
+                                     contentIdentifier: subtitle.absoluteString,
+                                     contentType: "text/vtt",
+                                     type: .text,
+                                     textSubtype: .subtitles,
+                                     name: "فارسی",
+                                     languageCode: "fa",
+                                     customData: nil) {
+            builder.mediaTracks = [track]
             options.activeTrackIDs = [1]
         }
         options.playPosition = media.position()

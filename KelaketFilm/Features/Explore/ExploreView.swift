@@ -18,7 +18,7 @@ struct ExploreView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             chip(L("همه", "All"), selected: selectedType == nil) { selectedType = nil }
-                            ForEach(postTypes) { type in
+                            ForEach(postTypes.filter { !$0.displayName.isEmpty }) { type in
                                 chip(type.displayName, selected: selectedType == type.termId) {
                                     selectedType = type.termId
                                 }
@@ -47,9 +47,9 @@ struct ExploreView: View {
                         shortcut(L("۲۵۰ برتر IMDb", "IMDb Top 250"), icon: "trophy") { Top250View() }
                         shortcut(L("کالکشن‌ها", "Collections"), icon: "square.stack.3d.up") { CollectionsView() }
                         if !appState.isInternational {
-                            shortcut("لیست‌های کاربران", icon: "list.star") { PublicListsView() }
+                            shortcut(L("لیست‌های کاربران", "User lists"), icon: "list.star") { PublicListsView() }
                             if appState.config.activeBlog {
-                                shortcut("وبلاگ", icon: "newspaper") { BlogListView() }
+                                shortcut(L("وبلاگ", "Blog"), icon: "newspaper") { BlogListView() }
                             }
                         }
                     }
@@ -57,7 +57,7 @@ struct ExploreView: View {
                 }
 
                 LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(genres) { genre in
+                    ForEach(genres.filter { !$0.displayName.isEmpty }) { genre in
                         NavigationLink {
                             ArchiveView(title: genre.displayName,
                                         filter: ArchiveFilter(postType: selectedType, genre: genre.id))

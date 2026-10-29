@@ -17,9 +17,9 @@ struct ActorView: View {
                 RemoteImage(url: URL(string: image ?? ""))
                     .frame(width: 110, height: 110)
                     .clipShape(Circle())
-                Text(name).font(.title3.bold())
+                Text(Localizer.shown(name) ?? "").font(.title3.bold())
 
-                if let bio = bio?.plainText, !bio.isEmpty {
+                if let bio = Localizer.shown(bio?.plainText) {
                     Text(bio)
                         .font(.footnote)
                         .foregroundStyle(.white.opacity(0.85))
@@ -34,7 +34,7 @@ struct ActorView: View {
                 if works.isEmpty {
                     Text(L("اثری ثبت نشده است.", "No titles yet.")).foregroundStyle(Theme.muted).padding(.top, 30)
                 } else {
-                    Text("\(works.count) اثر")
+                    Text(L("\(works.count) اثر", "\(works.count) titles"))
                         .font(.headline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding([.horizontal, .top])
@@ -77,10 +77,10 @@ struct ActorsArchiveView: View {
                         RemoteImage(url: URL(string: actor.image ?? ""))
                             .frame(width: 44, height: 44)
                             .clipShape(Circle())
-                        Text(actor.name ?? "")
+                        Text(Localizer.shown(actor.name) ?? "")
                         Spacer()
                         if let count = actor.count {
-                            Text("\(count) اثر").font(.caption).foregroundStyle(Theme.muted)
+                            Text(L("\(count) اثر", "\(count) titles")).font(.caption).foregroundStyle(Theme.muted)
                         }
                     }
                 }

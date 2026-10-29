@@ -60,6 +60,7 @@ targets:
         # Google Cast device discovery (CC1AD845 is the Default Media Receiver).
         NSBonjourServices: [_googlecast._tcp, _CC1AD845._googlecast._tcp]
         NSLocalNetworkUsageDescription: برای پیدا کردن تلویزیون و Chromecast در شبکه خانگی، جهت پخش ویدیو روی آن‌ها
+        KFAppNameEn: $(APP_DISPLAY_NAME_EN)
         KFSiteHost: $(KF_SITE_HOST)
         KFHostListURL: $(KF_HOST_LIST_URL)
         KFApiKey: $(KF_API_KEY)

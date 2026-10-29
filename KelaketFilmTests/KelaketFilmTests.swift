@@ -60,8 +60,11 @@ final class LocalizerTests: XCTestCase {
         XCTAssertEqual(Localizer.translatePhrase("سریال های کره ای جدید"), "New Korean Series")
         XCTAssertEqual(Localizer.translatePhrase("سریال های به روز شده"), "Recently Updated Series")
         XCTAssertEqual(Localizer.translatePhrase("زیرنویس فارسی"), "Persian Subtitles")
-        // Unknown words: no half-English title.
+        // Unknown words: no half-English title, unless asked for a loose one.
         XCTAssertNil(Localizer.translatePhrase("فیلم های نوروزی"))
+        XCTAssertEqual(Localizer.translatePhrase("فیلم های نوروزی", strict: false), "Movies")
+        XCTAssertNil(Localizer.translatePhrase("نوروزی", strict: false))
+        XCTAssertEqual(Localizer.translatePhrase("دوبله + زیرنویس"), "Dub + Subtitles")
     }
 
     func testEnglishTermNames() {

@@ -7,7 +7,15 @@ enum Localizer {
     /// A genre, country or type name for the current mode.
     static func term(name: String?, slug: String?) -> String {
         guard Region.isInternational else { return persian(name: name, slug: slug) }
-        return english(name: name, slug: slug) ?? name ?? ""
+        // No English name: nothing rather than Persian (lists drop empty names).
+        return english(name: name, slug: slug) ?? ""
+    }
+
+    /// Server text as is in the Persian app; abroad, nil when it is Persian,
+    /// so the English app never shows a Persian word.
+    static func shown(_ text: String?) -> String? {
+        guard let text, !text.isEmpty else { return nil }
+        return Region.isInternational && containsPersian(text) ? nil : text
     }
 
     /// The site names a few terms in English ("Film-Noir", "movie"); the
@@ -36,12 +44,12 @@ enum Localizer {
     static func title(_ text: String?) -> String {
         guard let text else { return "" }
         guard Region.isInternational, containsPersian(text) else { return text }
-        return translatePhrase(text) ?? text
+        return translatePhrase(text) ?? translatePhrase(text, strict: false) ?? "Featured"
     }
 
     /// Word by word, with "new"/"top"/"popular" moved to the front as in English.
     /// Nil when a word is unknown, so no half-translated title is shown.
-    static func translatePhrase(_ text: String) -> String? {
+    static func translatePhrase(_ text: String, strict: Bool = true) -> String? {
         let clean = normalized(text)
         if let whole = phrases[clean] { return whole }
         var leading: [String] = []
@@ -62,8 +70,11 @@ enum Localizer {
                 if !adjective.isEmpty, !leading.contains(adjective) { leading.append(adjective) }
             } else if let english = words[word] {
                 rest.append(english)
-            } else {
+            } else if strict {
                 return nil
+            } else if !containsPersian(word) {
+                // Loose: unknown Persian words are dropped, Latin ones ("IMDb") kept.
+                rest.append(word)
             }
         }
         // "فیلم های اکشن" reads "Movies Action"; English puts the kind last.
@@ -125,6 +136,12 @@ enum Localizer {
         "سریال های بروز شده": "Recently Updated Series",
         "ادامه تماشا": "Continue Watching",
         "دوبله فارسی": "Persian Dub",
+        "دوبله + زیرنویس": "Dub + Subtitles",
+        "دوبله و زیرنویس": "Dub + Subtitles",
+        "دوبله + زیرنویس فارسی": "Dub + Subtitles",
+        "دوبله + زیرنویس": "Dub + Subtitles",
+        "دوبله و زیرنویس": "Dub + Subtitles",
+        "دوبله + زیرنویس فارسی": "Dub + Subtitles",
         "زیرنویس فارسی": "Persian Subtitles",
         "زیرنویس چسبیده": "Hardcoded Subtitles",
         "پخش آنلاین": "Watch Online",

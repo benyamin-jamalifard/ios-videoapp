@@ -105,7 +105,7 @@ struct FilmDetailView: View {
                 if !detail.genres.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
-                            ForEach(Array(detail.genres.enumerated()), id: \.offset) { _, genre in
+                            ForEach(Array(detail.genres.filter { !$0.displayName.isEmpty }.enumerated()), id: \.offset) { _, genre in
                                 NavigationLink {
                                     ArchiveView(title: genre.displayName, filter: ArchiveFilter(genre: genre.id))
                                 } label: {
@@ -318,7 +318,7 @@ struct FilmDetailView: View {
                 Button {
                     playTrailer(url, detail: detail)
                 } label: {
-                    Label("تریلر", systemImage: "film")
+                    Label(L("تریلر", "Trailer"), systemImage: "film")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -562,7 +562,7 @@ struct FilmDetailView: View {
                                     .frame(width: 72, height: 72)
                                     .clipShape(Circle())
                                     .overlay(Circle().stroke(.white.opacity(0.1)))
-                                Text(actor.name ?? "")
+                                Text(Localizer.shown(actor.name) ?? "")
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.9))
                                     .lineLimit(2)
@@ -763,10 +763,10 @@ struct FilmDetailView: View {
     private func playTrailer(_ url: URL, detail: FilmDetail) {
         if Playback.isNativelyPlayable(url), !url.pathExtension.isEmpty {
             // postId 0: a trailer has no watch progress.
-            playback = PlaybackItem(url: url, title: "تریلر · \(detail.displayName)", postId: 0,
+            playback = PlaybackItem(url: url, title: L("تریلر", "Trailer") + " · \(detail.displayName)", postId: 0,
                                     contentType: "trailer", posterURL: detail.posterURL)
         } else {
-            webLink = WebLink(url: url, title: "تریلر")
+            webLink = WebLink(url: url, title: L("تریلر", "Trailer"))
         }
     }
 

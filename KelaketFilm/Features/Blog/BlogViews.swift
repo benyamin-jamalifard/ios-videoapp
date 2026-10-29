@@ -24,7 +24,7 @@ struct BlogListView: View {
                 if pager.isLoading {
                     ProgressView().padding()
                 } else if pager.isLoaded && pager.items.isEmpty {
-                    Text(pager.error ?? "مطلبی منتشر نشده است.")
+                    Text(pager.error ?? L("مطلبی منتشر نشده است.", "No posts yet."))
                         .foregroundStyle(Theme.muted)
                         .padding(.top, 60)
                 }
@@ -32,7 +32,7 @@ struct BlogListView: View {
             .padding()
         }
         .background(Theme.background.ignoresSafeArea())
-        .navigationTitle("وبلاگ")
+        .navigationTitle(L("وبلاگ", "Blog"))
         .task { if !pager.isLoaded { await pager.reload() } }
         .refreshable { await pager.reload() }
     }

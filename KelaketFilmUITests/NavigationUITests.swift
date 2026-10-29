@@ -4,8 +4,16 @@ import XCTest
 /// open (and stay open) from home, every kind of list and search.
 /// CI passes `TEST_RUNNER_KF_SHOTS=<dir>`; each step saves a screenshot there.
 final class NavigationUITests: XCTestCase {
+    /// Persian texts seen on English-mode screens; reported once per test.
+    private var persianSeen: [String] = []
+
     override func setUp() {
         continueAfterFailure = false
+    }
+
+    override func tearDown() {
+        XCTAssertTrue(persianSeen.isEmpty, "Persian in the English app: " + persianSeen.joined(separator: " | "))
+        persianSeen = []
     }
 
     func testIranHomeOpensFilm() { homeOpensFilm(mode: "ir") }
@@ -131,7 +139,19 @@ final class NavigationUITests: XCTestCase {
         }
     }
 
+    /// The English app must not show a single Persian letter.
+    private func checkEnglish(_ app: XCUIApplication, _ step: String) {
+        guard step.hasPrefix("intl") else { return }
+        let persian = NSPredicate(format: "label MATCHES %@", #"(?s).*[\u0600-\u06FF].*"#)
+        let labels = app.descendants(matching: .any).matching(persian).allElementsBoundByIndex.map(\.label)
+        for label in Set(labels) where !persianSeen.contains(where: { $0.hasSuffix(String(label.prefix(80))) }) {
+            persianSeen.append("\(step): \(label.prefix(80))")
+        }
+    }
+
+    /// Saves a screenshot for the CI log, and checks English screens for Persian.
     private func save(_ name: String) {
+        checkEnglish(XCUIApplication(), name)
         guard let dir = ProcessInfo.processInfo.environment["KF_SHOTS"] else { return }
         let data = XCUIScreen.main.screenshot().pngRepresentation
         try? data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("ui-\(name).png"))

@@ -28,7 +28,8 @@ enum APIError: LocalizedError {
         case .notConfigured:
             return L("آدرس سایت در تنظیمات اپ وارد نشده است.", "The app isn't set up yet.")
         case .badStatus(_, let message?):
-            return message
+            // The site's own messages are Persian.
+            return Localizer.shown(message) ?? "Something went wrong. Try again."
         case .badStatus(let code, nil):
             return L("خطای سرور (\(code))", "Server error (\(code))")
         case .decoding:

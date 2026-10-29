@@ -34,7 +34,7 @@ struct HomeView: View {
                     // Nothing saved yet and no connection: the downloads still play.
                     if !appState.isInternational, downloads.items.contains(where: { $0.state == .completed }) {
                         Button { router.tab = .downloads } label: {
-                            Label("تماشای فیلم‌های دانلودشده", systemImage: "arrow.down.circle.fill")
+                            Label(L("تماشای فیلم‌های دانلودشده", "Watch downloaded films"), systemImage: "arrow.down.circle.fill")
                         }
                         .buttonStyle(PrimaryButtonStyle())
                         .padding(.horizontal, 40)
@@ -51,7 +51,7 @@ struct HomeView: View {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 6) {
                     Image("Logo").resizable().scaledToFit().frame(height: 30)
-                    Text(Bundle.main.displayName).font(.headline)
+                    Text(Bundle.main.appName).font(.headline)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -100,7 +100,7 @@ struct HomeView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(Array(shortcuts.enumerated()), id: \.offset) { _, item in
-                                let title = item.title ?? item.name ?? ""
+                                let title = Localizer.title(item.title ?? item.name)
                                 NavigationLink {
                                     ArchiveView(title: title, filter: item.archiveFilter ?? ArchiveFilter())
                                 } label: {
@@ -166,7 +166,7 @@ private struct FeaturedSlider: View {
                             if post.imdbRating != nil && post.released != nil {
                                 Text("|").foregroundStyle(Theme.muted)
                             }
-                            if let year = post.released { Text(year) }
+                            if let year = Localizer.shown(post.released) { Text(year) }
                         }
                         .font(.caption.bold())
                         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -238,7 +238,7 @@ private struct ContinueWatchingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(text: block.title ?? "ادامه تماشا")
+            SectionTitle(text: block.title ?? L("ادامه تماشا", "Continue watching"))
                 .padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {

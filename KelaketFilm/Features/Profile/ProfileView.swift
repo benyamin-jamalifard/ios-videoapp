@@ -12,7 +12,7 @@ struct ProfileView: View {
                 Section {
                     VStack(spacing: 12) {
                         Image("Logo").resizable().scaledToFit().frame(height: 64)
-                        Text(Bundle.main.displayName).font(.headline)
+                        Text(Bundle.main.appName).font(.headline)
                         Text("Browse our catalogue of movies and series.")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
@@ -81,7 +81,7 @@ struct ProfileView: View {
                         Label("لیست‌های من", systemImage: "list.bullet.rectangle")
                     }
                     NavigationLink { NotificationsView() } label: {
-                        Label("اعلان‌ها", systemImage: "bell")
+                        Label(L("اعلان‌ها", "Notifications"), systemImage: "bell")
                     }
                     if appState.config.profileShowTickets {
                         NavigationLink { TicketsView() } label: {
@@ -133,7 +133,7 @@ struct ProfileView: View {
                 }
                 Section {
                     NavigationLink { NotificationsView() } label: {
-                        Label("اعلان‌ها", systemImage: "bell")
+                        Label(L("اعلان‌ها", "Notifications"), systemImage: "bell")
                     }
                 }
             }
@@ -149,10 +149,10 @@ struct ProfileView: View {
                 }
                 if !appState.isInternational {
                     if let telegram = appState.config.telegram, let url = URL(string: telegram) {
-                        pageRow("تلگرام", icon: "paperplane", url: url)
+                        pageRow(L("تلگرام", "Telegram"), icon: "paperplane", url: url)
                     }
                     if let instagram = appState.config.instagram, let url = URL(string: instagram) {
-                        pageRow("اینستاگرام", icon: "camera", url: url)
+                        pageRow(L("اینستاگرام", "Instagram"), icon: "camera", url: url)
                     }
                 }
             }

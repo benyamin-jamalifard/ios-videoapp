@@ -92,6 +92,20 @@ extension Bundle {
     var displayName: String {
         object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? ""
     }
+
+    /// The name shown inside the app: the English one in the English app.
+    var appName: String {
+        guard Region.isInternational else { return displayName }
+        let english = (object(forInfoDictionaryKey: "KFAppNameEn") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        return english.isEmpty || english.hasPrefix("$(") ? "Gite Movie" : english
+    }
+
+    /// The name shown inside the app: the English one in the English app.
+    var appName: String {
+        guard Region.isInternational else { return displayName }
+        let english = (object(forInfoDictionaryKey: "KFAppNameEn") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        return english.isEmpty || english.hasPrefix("$(") ? "Gite Movie" : english
+    }
 }
 
 extension Color {

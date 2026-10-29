@@ -53,7 +53,11 @@ struct FilmDetail: Decodable, Hashable {
     @LossyInt var totalPages: Int?
 
     var displayName: String {
-        (Region.isInternational ? enTitle ?? name : name ?? enTitle) ?? ""
+        if Region.isInternational {
+            // Never the Persian title in the English app.
+            return enTitle ?? name.flatMap { Localizer.containsPersian($0) ? nil : $0 } ?? ""
+        }
+        return name ?? enTitle ?? ""
     }
     var isSeries: Bool { !serialDl.isEmpty }
     var backdropURL: URL? { URL(string: cover ?? posterFullsize ?? poster ?? "") }

@@ -2,6 +2,8 @@
 // نکته: در xcconfig دو اسلش (//) کامنت حساب می‌شود، برای همین فقط دامنه را بنویسید (بدون https://).
 
 APP_DISPLAY_NAME = گیت مووی
+// نام انگلیسی داخل اپ برای کاربران خارج از ایران
+APP_DISPLAY_NAME_EN = Gite Movie
 KF_BUNDLE_ID = com.gitemovie.app
 KF_TEAM_ID =
 

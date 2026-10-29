@@ -105,7 +105,7 @@ private struct ArchiveFilterSheet: View {
     private func termPicker(_ title: String, selection: Binding<Int?>, terms: [FilterTerm], disabled: Bool) -> some View {
         Picker(title, selection: selection) {
             Text(L("همه", "All")).tag(Int?.none)
-            ForEach(terms) { term in
+            ForEach(terms.filter { !$0.displayName.isEmpty }) { term in
                 Text(term.displayName).tag(term.termId)
             }
         }

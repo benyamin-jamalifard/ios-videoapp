@@ -8,13 +8,13 @@ struct BoxOfficeView: View {
         List {
             if let boxOffice {
                 if let updated = boxOffice.lastUpdateHuman {
-                    Text("آخرین به‌روزرسانی: \(updated)")
+                    Text(L("آخرین به‌روزرسانی: ", "Updated: ") + updated)
                         .font(.caption)
                         .foregroundStyle(Theme.muted)
                         .listRowBackground(Color.clear)
                 }
                 if boxOffice.data.isEmpty {
-                    Text(boxOffice.message ?? L("اطلاعاتی موجود نیست.", "No data available."))
+                    Text(Localizer.shown(boxOffice.message) ?? L("اطلاعاتی موجود نیست.", "No data available."))
                         .foregroundStyle(Theme.muted)
                         .listRowBackground(Color.clear)
                 }
@@ -49,11 +49,11 @@ struct BoxOfficeView: View {
                 .frame(width: 50, height: 75)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.title ?? "").font(.subheadline.bold())
+                Text(Localizer.shown(item.title) ?? "").font(.subheadline.bold())
                 Group {
-                    if let weekend = item.weekend { Text("فروش آخر هفته: \(weekend)") }
-                    if let gross = item.gross { Text("فروش کل: \(gross)") }
-                    if let weeks = item.weeks { Text("هفته‌های اکران: \(weeks)") }
+                    if let weekend = item.weekend { Text(L("فروش آخر هفته: ", "Weekend: ") + weekend) }
+                    if let gross = item.gross { Text(L("فروش کل: ", "Total: ") + gross) }
+                    if let weeks = item.weeks { Text(L("هفته‌های اکران: ", "Weeks: ") + weeks) }
                 }
                 .font(.caption)
                 .foregroundStyle(Theme.muted)
@@ -115,9 +115,9 @@ struct WeeklyScheduleView: View {
                                     .frame(width: 50, height: 75)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.name ?? "").font(.subheadline.bold())
+                                    Text(Localizer.shown(item.name) ?? "").font(.subheadline.bold())
                                     if let update = item.update {
-                                        Text(update.plainText).font(.caption).foregroundStyle(Theme.muted)
+                                        Text(Localizer.shown(update.plainText) ?? "").font(.caption).foregroundStyle(Theme.muted)
                                     }
                                 }
                             }
@@ -207,7 +207,7 @@ struct Top250View: View {
                 .frame(width: 46, height: 68)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.name ?? "").font(.subheadline.bold())
+                Text(Localizer.shown(item.name) ?? "").font(.subheadline.bold())
                 HStack(spacing: 8) {
                     if let rating = item.imdbRating {
                         Label(rating, systemImage: "star.fill").foregroundStyle(.yellow)
@@ -243,9 +243,9 @@ struct CollectionsView: View {
                             LinearGradient(colors: [.clear, .black.opacity(0.85)],
                                            startPoint: .center, endPoint: .bottom)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name ?? "").font(.subheadline.bold()).lineLimit(2)
+                                Text(Localizer.title(item.name)).font(.subheadline.bold()).lineLimit(2)
                                 if let count = item.count {
-                                    Text("\(count) عنوان").font(.caption).foregroundStyle(Theme.muted)
+                                    Text(L("\(count) عنوان", "\(count) titles")).font(.caption).foregroundStyle(Theme.muted)
                                 }
                             }
                             .padding(10)

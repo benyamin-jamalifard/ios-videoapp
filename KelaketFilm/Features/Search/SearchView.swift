@@ -123,7 +123,7 @@ struct SearchView: View {
                 toggleChip(L("دوبله فارسی", "Persian dub"), icon: "mic.fill", isOn: $filter.dubbed)
                 toggleChip(L("زیرنویس", "Subtitled"), icon: "captions.bubble.fill", isOn: $filter.subtitled)
                 if !appState.isInternational {
-                    toggleChip("پخش آنلاین", icon: "play.circle.fill", isOn: $filter.streamable)
+                    toggleChip(L("پخش آنلاین", "Streamable"), icon: "play.circle.fill", isOn: $filter.streamable)
                 }
                 if !filter.isEmpty {
                     Button { filter = SearchFilter() } label: {
@@ -333,7 +333,7 @@ private struct SearchFilterSheet: View {
                     Toggle(L("دوبله فارسی", "Persian dub"), isOn: $draft.dubbed)
                     Toggle(L("زیرنویس فارسی", "Persian subtitles"), isOn: $draft.subtitled)
                     if !appState.isInternational {
-                        Toggle("قابل پخش آنلاین", isOn: $draft.streamable)
+                        Toggle(L("قابل پخش آنلاین", "Streamable"), isOn: $draft.streamable)
                     }
                 }
                 .tint(Theme.accent)
@@ -366,7 +366,7 @@ private struct SearchFilterSheet: View {
     private func slugPicker(_ title: String, selection: Binding<String?>, terms: [FilterTerm]) -> some View {
         Picker(title, selection: selection) {
             Text(L("همه", "All")).tag(String?.none)
-            ForEach(terms.filter { $0.termSlug != nil }) { term in
+            ForEach(terms.filter { $0.termSlug != nil && !$0.displayName.isEmpty }) { term in
                 Text(term.displayName).tag(term.termSlug)
             }
         }

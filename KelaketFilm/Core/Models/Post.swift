@@ -44,7 +44,9 @@ struct Post: Decodable, Identifiable, Hashable {
 
     /// The ribbon under the poster ("زیرنویس فارسی"), in English abroad.
     var badgeLabel: String? {
-        badgeText.map(Localizer.title)
+        guard let badgeText else { return nil }
+        guard Region.isInternational, Localizer.containsPersian(badgeText) else { return badgeText }
+        return Localizer.translatePhrase(badgeText)
     }
 }
 

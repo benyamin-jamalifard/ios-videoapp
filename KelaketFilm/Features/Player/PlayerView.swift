@@ -8,6 +8,7 @@ struct PlayerView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var controller: PlayerController
+    @ObservedObject private var cast = CastManager.shared
     @State private var seekFeedback: Double?
     @State private var scrubPreview: Double?
     @State private var brightnessStart: CGFloat?
@@ -47,6 +48,9 @@ struct PlayerView: View {
             if let failure = controller.failure {
                 failureView(failure)
             }
+            if cast.castingItem != nil {
+                castOverlay
+            }
         }
         // Keep the scrubber and the skip buttons left-to-right in the RTL app.
         .environment(\.layoutDirection, .leftToRight)
@@ -62,11 +66,39 @@ struct PlayerView: View {
             controller.stop()
             Orientation.request(.portrait)
         }
+        // Back from the TV: carry on here from where the TV was.
+        .onChange(of: cast.castingItem == nil) { stopped in
+            if stopped, cast.position > 5 { controller.seek(to: cast.position) }
+        }
         // Auto-hide the controls a few seconds after the last touch.
         .task(id: controller.interaction) {
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
             controller.hideControlsIfIdle()
+        }
+    }
+
+    /// While the video plays on the TV, the screen becomes its remote.
+    private var castOverlay: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.opacity(0.92).ignoresSafeArea()
+            RemoteImage(url: controller.item.posterURL)
+                .blur(radius: 40)
+                .opacity(0.35)
+                .ignoresSafeArea()
+            ScrollView {
+                CastRemoteView()
+                    .frame(maxWidth: 460)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 30)
+            }
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.down")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+            }
+            .padding(12)
         }
     }
 

@@ -107,7 +107,7 @@ private struct ArchiveFilterSheet: View {
         Picker(title, selection: selection) {
             Text(L("همه", "All")).tag(Int?.none)
             ForEach(terms) { term in
-                Text(term.termName ?? "").tag(term.termId)
+                Text(term.displayName).tag(term.termId)
             }
         }
         .disabled(disabled)

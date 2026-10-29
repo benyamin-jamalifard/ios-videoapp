@@ -55,7 +55,8 @@ targets:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        UIBackgroundModes: [audio, remote-notification]
+        UIBackgroundModes: [audio, fetch, remote-notification]
+        BGTaskSchedulerPermittedIdentifiers: [$(KF_BUNDLE_ID).refresh]
         # Google Cast device discovery (CC1AD845 is the Default Media Receiver).
         NSBonjourServices: [_googlecast._tcp, _CC1AD845._googlecast._tcp]
         NSLocalNetworkUsageDescription: برای پیدا کردن تلویزیون و Chromecast در شبکه خانگی، جهت پخش ویدیو روی آن‌ها
@@ -70,3 +71,24 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: $(KF_TEAM_ID)
+
+  # Logic tests, run in CI. They compile the model and helper sources
+  # directly, so they need neither the app nor its pods.
+  KelaketFilmTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: KelaketFilmTests
+      - path: KelaketFilm/Core/Models
+      - path: KelaketFilm/Core/Storage/Region.swift
+      - path: KelaketFilm/Core/Storage/Localizer.swift
+      - path: KelaketFilm/Core/Network/OfflineCache.swift
+      - path: KelaketFilm/Shared/Theme.swift
+      - path: KelaketFilm/Features/Player/Subtitles.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(KF_BUNDLE_ID).tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+    scheme:
+      testTargets: [KelaketFilmTests]

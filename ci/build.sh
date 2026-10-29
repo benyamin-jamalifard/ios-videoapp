@@ -70,22 +70,54 @@ devices = json.load(sys.stdin)["devices"]
 phones = [d for runtime, items in devices.items() if "iOS" in runtime for d in items if d["name"].startswith("iPhone")]
 print(phones[-1]["udid"])')
 
-xcrun simctl boot "$UDID"
+# Unit tests (models, subtitles, localization, offline cache). Reported, but
+# a failure doesn't stop the build artifacts.
+xcodebuild test \
+  -workspace KelaketFilm.xcworkspace \
+  -scheme KelaketFilmTests \
+  -destination "id=$UDID" \
+  -derivedDataPath build \
+  CODE_SIGNING_ALLOWED=NO > test.log 2>&1 && echo "Unit tests passed" || echo "Unit tests FAILED"
+grep -E "error:|failed|Executed|TEST (SUCCEEDED|FAILED)" test.log | tail -40 || true
+
+xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
 xcrun simctl status_bar "$UDID" override --time "9:41" || true
 xcrun simctl install "$UDID" "$APP"
 
+# Screenshots of both modes: Iran (Persian, full app) and abroad (English,
+# browse only). Screens are opened through the app's URL scheme.
 mkdir -p screenshots
-xcrun simctl launch "$UDID" "$BUNDLE_ID"
-sleep 4
-xcrun simctl io "$UDID" screenshot screenshots/1-launch.png
-sleep 20
-xcrun simctl io "$UDID" screenshot screenshots/2-home.png
-# Film and series pages open through the app's own URL scheme.
-if [ -n "${SAMPLE_POST_ID:-}" ]; then
-  xcrun simctl openurl "$UDID" "kelaketfilm://app/film/$SAMPLE_POST_ID"
+POST_ID=${SAMPLE_POST_ID:-81141}
+shoot() {
+  xcrun simctl io "$UDID" screenshot "screenshots/$1.png" >/dev/null 2>&1 || true
+}
+for mode in ir intl; do
+  xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -kf.region.override "$mode"
+  sleep 3
+  shoot "$mode-1-launch"
+  sleep 20
+  shoot "$mode-2-home"
+  xcrun simctl openurl "$UDID" "kelaketfilm://app/film/$POST_ID"
   sleep 12
-  xcrun simctl io "$UDID" screenshot screenshots/3-film.png
-fi
-xcrun simctl spawn "$UDID" log show --last 2m --predicate 'process == "KelaketFilm"' --style compact \
+  shoot "$mode-3-film"
+  n=4
+  for tab in explore search downloads profile; do
+    xcrun simctl openurl "$UDID" "kelaketfilm://app/tab/$tab"
+    sleep 7
+    shoot "$mode-$n-$tab"
+    n=$((n + 1))
+  done
+done
+xcrun simctl spawn "$UDID" log show --last 5m --predicate 'process == "KelaketFilm"' --style compact \
   > screenshots/app.log || true
+cp test.log screenshots/ 2>/dev/null || true
+
+# Small copies in the build log, readable where the artifact storage is blocked.
+echo "=== THUMBNAILS ==="
+for shot in screenshots/*.png; do
+  sips -s format jpeg -s formatOptions 35 -Z 420 "$shot" --out /tmp/thumb.jpg >/dev/null 2>&1 || continue
+  echo "THUMB $(basename "$shot" .png) $(base64 -i /tmp/thumb.jpg | tr -d '\n')"
+done
+echo "=== END THUMBNAILS ==="

@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
         CastManager.configure()
         Task { @MainActor in DownloadManager.shared.activate() }
+        BackgroundRefresh.register()
+        OfflineCache.prune()
 
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
             return true

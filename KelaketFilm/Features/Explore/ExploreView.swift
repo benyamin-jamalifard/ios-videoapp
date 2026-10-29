@@ -4,6 +4,7 @@ import SwiftUI
 /// grid of genre cards, plus the sections the Android side menu links to.
 struct ExploreView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var network = NetworkStatus.shared
     @State private var genres: [Genre] = []
     @State private var postTypes: [FilterTerm] = []
     @State private var selectedType: Int?
@@ -18,7 +19,7 @@ struct ExploreView: View {
                         HStack(spacing: 8) {
                             chip(L("همه", "All"), selected: selectedType == nil) { selectedType = nil }
                             ForEach(postTypes) { type in
-                                chip(type.termName ?? "", selected: selectedType == type.termId) {
+                                chip(type.displayName, selected: selectedType == type.termId) {
                                     selectedType = type.termId
                                 }
                             }
@@ -58,7 +59,7 @@ struct ExploreView: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(genres) { genre in
                         NavigationLink {
-                            ArchiveView(title: genre.title ?? "",
+                            ArchiveView(title: genre.displayName,
                                         filter: ArchiveFilter(postType: selectedType, genre: genre.id))
                         } label: {
                             genreCard(genre)
@@ -73,7 +74,8 @@ struct ExploreView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(L("دسته بندی", "Browse"))
         .navigationBarTitleDisplayMode(.inline)
-        .task {
+        // Retried when the site comes back, in case the first load failed.
+        .task(id: network.refreshToken) {
             if genres.isEmpty, let result = try? await appState.api.genres() {
                 genres = result.filter { ($0.count ?? 1) > 0 }
             }
@@ -121,7 +123,7 @@ struct ExploreView: View {
             }
             LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 6) {
-                Text(genre.title ?? "").font(.subheadline.bold())
+                Text(genre.displayName).font(.subheadline.bold())
                 Capsule().fill(Theme.accent).frame(width: 30, height: 3)
             }
             .padding(12)

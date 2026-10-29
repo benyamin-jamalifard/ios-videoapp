@@ -1,18 +1,44 @@
 import UIKit
 import SwiftUI
 
+/// A poster or backdrop, through `ImageLoader` (memory, then disk, then the
+/// network), so images already seen also show offline.
 struct RemoteImage: View {
     let url: URL?
     var contentMode: ContentMode = .fill
 
+    @State private var image: UIImage?
+
+    init(url: URL?, contentMode: ContentMode = .fill) {
+        self.url = url
+        self.contentMode = contentMode
+        _image = State(initialValue: url.flatMap { ImageLoader.cachedImage(for: $0) })
+    }
+
     var body: some View {
-        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().aspectRatio(contentMode: contentMode)
-            default:
-                Rectangle().fill(Theme.surfaceRaised)
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: contentMode)
+            } else {
+                Rectangle()
+                    .fill(Theme.surfaceRaised)
+                    .overlay(Image(systemName: "film").font(.title3).foregroundStyle(.white.opacity(0.12)))
             }
+        }
+        .task(id: url) {
+            guard let url else {
+                image = nil
+                return
+            }
+            if let cached = ImageLoader.cachedImage(for: url) {
+                image = cached
+                return
+            }
+            let loaded = await ImageLoader.shared.image(for: url)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.2)) { image = loaded }
         }
     }
 }
@@ -37,7 +63,7 @@ struct PosterCard: View {
                 }
                 .overlay(alignment: .topTrailing) { PosterBadges(post: post).padding(6) }
                 .overlay(alignment: .bottom) {
-                    if let badge = post.badgeText {
+                    if let badge = post.badgeLabel {
                         Text(badge)
                             .font(.caption2.bold())
                             .frame(maxWidth: .infinity)

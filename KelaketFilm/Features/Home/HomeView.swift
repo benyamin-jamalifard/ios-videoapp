@@ -17,14 +17,28 @@ final class HomeViewModel: ObservableObject {
 
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var model = HomeViewModel()
+    @ObservedObject private var network = NetworkStatus.shared
+    @ObservedObject private var downloads = DownloadManager.shared
 
     var body: some View {
         Group {
             if let home = model.home {
                 content(home)
             } else if let error = model.error {
-                ErrorStateView(message: error) { Task { await model.load(api: appState.api) } }
+                VStack(spacing: 0) {
+                    ErrorStateView(message: error) { Task { await model.load(api: appState.api) } }
+                    // Nothing saved yet and no connection: the downloads still play.
+                    if !appState.isInternational, downloads.items.contains(where: { $0.state == .completed }) {
+                        Button { router.tab = .downloads } label: {
+                            Label("تماشای فیلم‌های دانلودشده", systemImage: "arrow.down.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 60)
+                    }
+                }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -47,7 +61,9 @@ struct HomeView: View {
             }
         }
         // Reload when the session changes so "continue watching" follows the user.
-        .task(id: appState.token) { await model.load(api: appState.api) }
+        // Also reloads when the site comes back after an outage, after time
+        // away, and every few minutes, so the lists stay current.
+        .task(id: "\(appState.token ?? "")|\(network.refreshToken)") { await model.load(api: appState.api) }
     }
 
     private func content(_ home: HomeScreen) -> some View {
@@ -104,13 +120,13 @@ struct HomeView: View {
                 }
 
                 if let updated = home.updatedSeries, !updated.data.isEmpty {
-                    PostRow(title: appState.isInternational ? "Recently updated series" : updated.title ?? "سریال‌های به‌روز شده",
+                    PostRow(title: appState.isInternational ? "Recently Updated Series" : updated.title ?? "سریال‌های به‌روز شده",
                             posts: updated.data)
                 }
 
                 ForEach(home.selectedCats) { category in
                     if !category.data.isEmpty {
-                        PostRow(title: category.catName ?? "", posts: category.data,
+                        PostRow(title: Localizer.title(category.catName), posts: category.data,
                                 seeAll: category.archiveFilter)
                     }
                 }

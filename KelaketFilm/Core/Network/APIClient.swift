@@ -13,6 +13,8 @@ struct Endpoint {
     var body: Encodable?
     /// Extra headers for this request only.
     var headers: [String: String] = [:]
+    /// Most routes answer in seconds; a few (top 250) are slow on the server.
+    var timeout: TimeInterval = 25
 }
 
 enum APIError: LocalizedError {
@@ -58,6 +60,7 @@ final class APIClient {
     private let encoder: JSONEncoder
 
     private static let cachedHostKey = "kf.siteHost"
+    private var lastHostRecovery = Date.distantPast
 
     init(bundle: Bundle = .main, session: URLSession = .shared) {
         let host = (bundle.object(forInfoDictionaryKey: "KFSiteHost") as? String ?? "")
@@ -73,6 +76,9 @@ final class APIClient {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
+
+        // Background refreshes run before the UI (and AppState) exist.
+        userToken = Keychain.string(for: "jwt")
 
         // Start from the last address that worked, then the built-in one.
         let cached = UserDefaults.standard.string(forKey: Self.cachedHostKey)
@@ -126,29 +132,107 @@ final class APIClient {
         return URL(string: "https://\(bare)/wp-json/")
     }
 
+    /// Sends a request. GET answers are saved, and when the site can't be
+    /// reached the saved copy is returned instead, so screens keep working
+    /// through outages. A dead address triggers a look-up of the current one.
     func send<T: Decodable>(_ endpoint: Endpoint, as type: T.Type = T.self) async throws -> T {
-        let request = try makeRequest(endpoint)
+        let cacheKey = endpoint.method == .get ? cacheKey(for: endpoint) : nil
+        do {
+            let data = try await fetch(endpoint, recoverHost: true)
+            let value = try decode(T.self, from: data, path: endpoint.path)
+            if let cacheKey { OfflineCache.responses.write(data, for: cacheKey) }
+            await report(reachable: true)
+            return value
+        } catch let error as APIError {
+            switch error {
+            case .transport, .badStatus(500..., _):
+                await report(reachable: false)
+                if let cacheKey, let saved = OfflineCache.responses.read(cacheKey),
+                   let value = try? decode(T.self, from: saved, path: endpoint.path) {
+                    return value
+                }
+            default:
+                break
+            }
+            throw error
+        }
+    }
 
+    /// True when the site answers at all; used to notice the end of an outage.
+    func ping() async -> Bool {
+        guard let request = try? makeRequest(Endpoint(path: "mobile/v2/config", timeout: 10)),
+              let (_, response) = try? await session.data(for: request),
+              let status = (response as? HTTPURLResponse)?.statusCode
+        else { return false }
+        return status < 500
+    }
+
+    private func fetch(_ endpoint: Endpoint, recoverHost: Bool) async throws -> Data {
+        let request = try makeRequest(endpoint)
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            if (error as? URLError)?.code == .cancelled { throw APIError.transport(error) }
+            // The address may have been filtered or moved: find the current one and retry once.
+            if recoverHost, await self.recoverHost() {
+                return try await fetch(endpoint, recoverHost: false)
+            }
             throw APIError.transport(error)
         }
-
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw APIError.badStatus(http.statusCode, Self.wordpressMessage(in: data))
         }
+        return data
+    }
 
+    private func decode<T: Decodable>(_ type: T.Type, from data: Data, path: String) throws -> T {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
             #if DEBUG
-            print("Decoding \(endpoint.path) failed:", error)
+            print("Decoding \(path) failed:", error)
             #endif
             throw APIError.decoding(error)
         }
+    }
+
+    @MainActor
+    private func report(reachable: Bool) {
+        NetworkStatus.shared.report(reachable: reachable)
+    }
+
+    /// The saved copy belongs to the route, its query and the signed-in user
+    /// (film links differ per account); not to the host, which may change.
+    private func cacheKey(for endpoint: Endpoint) -> String {
+        let query = endpoint.query.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+        return "\(endpoint.path)?\(query)#\(userToken ?? "")"
+    }
+
+    /// Tries the published address, then the built-in one; switches to the
+    /// first that answers. At most once a minute.
+    private func recoverHost() async -> Bool {
+        lock.lock()
+        let due = Date().timeIntervalSince(lastHostRecovery) > 60
+        if due { lastHostRecovery = Date() }
+        lock.unlock()
+        guard due else { return false }
+
+        var candidates: [String] = []
+        if let published = await fetchPublishedHost() { candidates.append(published) }
+        if let defaultHost { candidates.append(defaultHost) }
+        for host in candidates where host != currentHost {
+            guard let url = Self.apiURL(host: host)?.appendingPathComponent("mobile/v2/config") else { continue }
+            var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+            if !apiKey.isEmpty { request.setValue(apiKey, forHTTPHeaderField: "X-API-KEY") }
+            if let (_, response) = try? await session.data(for: request),
+               ((response as? HTTPURLResponse)?.statusCode ?? 500) < 500 {
+                useHost(host)
+                return true
+            }
+        }
+        return false
     }
 
     private func makeRequest(_ endpoint: Endpoint) throws -> URLRequest {
@@ -164,8 +248,9 @@ final class APIClient {
         }
         guard let url = components.url else { throw APIError.notConfigured }
 
-        // Some routes are slow on the server (top 250 has taken over 40 s).
-        var request = URLRequest(url: url, timeoutInterval: 90)
+        // Always fresh from the server; outages are covered by `OfflineCache`.
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
+                                 timeoutInterval: endpoint.timeout)
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("ios", forHTTPHeaderField: "X-KELAKET-CLIENT")

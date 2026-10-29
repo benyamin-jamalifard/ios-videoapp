@@ -4,7 +4,8 @@ import Foundation
 /// Route definitions live in kelaketfilm-app/includes/api.php.
 extension APIClient {
     func config() async throws -> AppConfig {
-        try await send(Endpoint(path: "mobile/v2/config"))
+        // Short: the splash waits for it, and the saved copy covers a slow site.
+        try await send(Endpoint(path: "mobile/v2/config", timeout: 12))
     }
 
     func homeScreen() async throws -> HomeScreen {

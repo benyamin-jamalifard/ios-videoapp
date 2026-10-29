@@ -21,6 +21,13 @@ struct FilmDetail: Decodable, Hashable {
     @LossyString var story: String?
     @LossyString var about: String?
     @LossyString var director: String?
+    @LossyString var writer: String?
+    /// Cast as one comma-separated line; `fullActors` has photos and ids.
+    @LossyString var actors: String?
+    @LossyString var language: String?
+    @LossyString var awards: String?
+    /// Age rating such as "PG-13" or "TV-MA".
+    @LossyString var rate: String?
     @LossyString var trailer: String?
     @LossyString var userVote: String?
 

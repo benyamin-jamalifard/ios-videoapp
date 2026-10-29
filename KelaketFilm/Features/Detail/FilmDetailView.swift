@@ -4,6 +4,7 @@ struct FilmDetailView: View {
     let id: Int
 
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var network = NetworkStatus.shared
     @State private var detail: FilmDetail?
     @State private var error: String?
     @State private var playback: PlaybackItem?
@@ -48,7 +49,7 @@ struct FilmDetailView: View {
             }
         }
         // Reload after login: links and watch progress depend on the user.
-        .task(id: appState.token) { await load() }
+        .task(id: "\(appState.token ?? "")|\(network.refreshToken)") { await load() }
         .fullScreenCover(item: $playback) { item in
             PlayerView(item: item)
                 .environmentObject(appState)
@@ -89,9 +90,8 @@ struct FilmDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header(detail)
 
-                if appState.isInternational {
-                    regionNotice
-                } else {
+                // Abroad the page is information only: no buttons, no notice.
+                if !appState.isInternational {
                     primaryActions(detail)
                 }
 
@@ -100,9 +100,9 @@ struct FilmDetailView: View {
                         HStack {
                             ForEach(Array(detail.genres.enumerated()), id: \.offset) { _, genre in
                                 NavigationLink {
-                                    ArchiveView(title: genre.name ?? "", filter: ArchiveFilter(genre: genre.id))
+                                    ArchiveView(title: genre.displayName, filter: ArchiveFilter(genre: genre.id))
                                 } label: {
-                                    Text(genre.name ?? "")
+                                    Text(genre.displayName)
                                         .font(.footnote.weight(.medium))
                                         .padding(.horizontal, 12).padding(.vertical, 6)
                                         .background(Theme.surfaceRaised, in: Capsule())
@@ -114,10 +114,14 @@ struct FilmDetailView: View {
                     }
                 }
 
-                if let story = detail.story ?? detail.about {
+                // The stories are written in Persian; the English page leaves them out.
+                if let story = detail.story ?? detail.about,
+                   !appState.isInternational || !Localizer.containsPersian(story) {
                     ExpandableText(text: story.plainText)
                         .padding(.horizontal)
                 }
+
+                specsSection(detail)
 
                 if !appState.isInternational {
                     voteRow(detail)
@@ -135,7 +139,8 @@ struct FilmDetailView: View {
                     actorsRow(detail.fullActors)
                 }
                 if let collection = detail.collection, !collection.data.isEmpty {
-                    PostRow(title: collection.name ?? collection.title ?? L("کالکشن", "Collection"), posts: collection.data)
+                    PostRow(title: Localizer.title(collection.name ?? collection.title ?? L("کالکشن", "Collection")),
+                            posts: collection.data)
                 }
                 if !detail.related.isEmpty {
                     PostRow(title: L("پیشنهادهای مشابه", "More like this"), posts: detail.related)
@@ -196,23 +201,81 @@ struct FilmDetailView: View {
             .background(Theme.surfaceRaised, in: RoundedRectangle(cornerRadius: 8))
     }
 
-    private var regionNotice: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "globe")
-                .font(.title3)
-                .foregroundStyle(Theme.accentText)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Streaming isn't available in your region")
-                    .font(.subheadline.bold())
-                Text("You can browse the catalogue, but watching and downloading are only available in Iran.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
+    /// Ratings, crew and production details, in both modes.
+    @ViewBuilder
+    private func specsSection(_ detail: FilmDetail) -> some View {
+        let rows = specRows(detail)
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionTitle(text: L("مشخصات", "Details"))
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Label(row.label, systemImage: row.icon)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.secondaryText)
+                                .frame(width: 128, alignment: .leading)
+                            Text(row.value)
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.disabled)
+                        }
+                        .padding(.vertical, 10)
+                        if index < rows.count - 1 {
+                            Divider().overlay(Theme.surfaceRaised)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
             }
+            .padding(.horizontal)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
-        .padding(.horizontal)
+    }
+
+    private func specRows(_ detail: FilmDetail) -> [(label: String, icon: String, value: String)] {
+        func clean(_ value: String?) -> String? {
+            guard let value = value?.plainText, !value.isEmpty, value != "N/A", value != "0" else { return nil }
+            // "English, English, English" → "English".
+            var seen: [String] = []
+            for part in value.components(separatedBy: CharacterSet(charactersIn: ",،")) {
+                let item = part.trimmingCharacters(in: .whitespaces)
+                if !item.isEmpty, !seen.contains(item) { seen.append(item) }
+            }
+            return seen.joined(separator: L("، ", ", "))
+        }
+        var rows: [(label: String, icon: String, value: String)] = []
+        func add(_ label: String, _ icon: String, _ value: String?) {
+            if let value = clean(value) { rows.append((label, icon, value)) }
+        }
+        if let imdb = clean(detail.imdbRating) {
+            let votes = clean(detail.imdbVotes).flatMap { Int($0.filter(\.isNumber)) }
+            add("IMDb", "star.fill", imdb + (votes.map { L(" از ۱۰ · \($0.formatted()) رأی", " / 10 · \($0.formatted()) votes") } ?? ""))
+        }
+        add("Rotten Tomatoes", "leaf.fill", detail.rotten)
+        add("Metacritic", "chart.bar.fill", detail.metacritic)
+        add(L("کارگردان", "Director"), "megaphone.fill", detail.director)
+        add(L("نویسنده", "Writer"), "pencil", detail.writer)
+        if detail.fullActors.isEmpty { add(L("بازیگران", "Cast"), "person.2.fill", detail.actors) }
+        add(L("ژانر", "Genre"), "theatermasks.fill", detail.genres.map(\.displayName).joined(separator: ", "))
+        add(L("کشور", "Country"), "globe", detail.countries.map(\.displayName).joined(separator: ", "))
+        add(L("زبان", "Language"), "character.bubble.fill", detail.language)
+        add(L("سال انتشار", "Released"), "calendar", detail.releasedDate ?? detail.released)
+        add(L("مدت زمان", "Runtime"), "clock.fill", detail.runtime)
+        add(L("رده سنی", "Rated"), "person.badge.shield.checkmark.fill", detail.rate)
+        if detail.isSeries {
+            let episodes = detail.serialDl.reduce(0) { $0 + $1.episode.count }
+            add(L("فصل‌ها", "Seasons"), "square.stack.fill", String(detail.serialDl.count))
+            if episodes > 0 { add(L("قسمت‌ها", "Episodes"), "list.number", String(episodes)) }
+            add(L("وضعیت", "Status"), "dot.radiowaves.left.and.right",
+                appState.isInternational ? detail.airStatus.map(Localizer.title) : detail.airStatus)
+        }
+        add(L("جوایز", "Awards"), "trophy.fill", detail.awards)
+        // Persian-only values (such as a Persian director name) are skipped abroad.
+        if appState.isInternational {
+            rows.removeAll { Localizer.containsPersian($0.value) }
+        }
+        return rows
     }
 
     @ViewBuilder

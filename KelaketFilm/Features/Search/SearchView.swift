@@ -314,7 +314,7 @@ private struct SearchFilterSheet: View {
         Picker(title, selection: selection) {
             Text(L("همه", "All")).tag(String?.none)
             ForEach(terms.filter { $0.termSlug != nil }) { term in
-                Text(term.termName ?? term.termSlug ?? "").tag(term.termSlug)
+                Text(term.displayName).tag(term.termSlug)
             }
         }
     }

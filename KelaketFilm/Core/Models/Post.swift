@@ -37,12 +37,19 @@ struct Post: Decodable, Identifiable, Hashable {
     var wideImageURL: URL? {
         URL(string: cover ?? poster2 ?? posterFullsize ?? poster ?? "")
     }
+
+    /// The ribbon under the poster ("زیرنویس فارسی"), in English abroad.
+    var badgeLabel: String? {
+        badgeText.map(Localizer.title)
+    }
 }
 
 struct Term: Decodable, Hashable, Identifiable {
     @LossyInt var id: Int?
     @LossyString var name: String?
     @LossyString var slug: String?
+
+    var displayName: String { Localizer.term(name: name, slug: slug) }
 }
 
 struct Actor: Decodable, Hashable, Identifiable {

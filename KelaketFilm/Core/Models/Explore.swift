@@ -14,6 +14,8 @@ struct FilterTerm: Decodable, Hashable, Identifiable {
     @LossyString var termSlug: String?
 
     var id: Int { termId ?? 0 }
+
+    var displayName: String { Localizer.term(name: termName, slug: termSlug) }
 }
 
 /// Filters for `GET mobile/v2/archive`. Term ids, nil meaning "all".
@@ -107,6 +109,8 @@ struct Genre: Decodable, Hashable, Identifiable {
     @LossyInt var count: Int?
     /// ACF image: a URL string, or an image array with `url`.
     @LossyObject var image: ImageField?
+
+    var displayName: String { Localizer.term(name: title, slug: slug) }
 }
 
 struct ImageField: Decodable, Hashable {

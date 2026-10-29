@@ -45,8 +45,9 @@ extension APIClient {
 
     /// `list` is "movies" or "series"; 42 titles per page.
     func top250(list: String, page: Int) async throws -> RankedPage {
+        // Slow on the server (it has taken over 40 s).
         try await send(Endpoint(path: "mobile/v2/lists/top250",
-                                query: ["list": list, "page": String(page)]))
+                                query: ["list": list, "page": String(page)], timeout: 90))
     }
 
     func collections(page: Int) async throws -> CollectionsPage {

@@ -139,13 +139,13 @@ struct ProfileView: View {
             }
 
             // Kept for the App Store (guideline 5.1.1 asks for a reachable privacy
-            // policy); they open inside the app, so the addresses stay hidden.
+            // policy); the texts are part of the app, so no web page opens.
             Section {
-                if let link = appState.config.rulesLink, let url = URL(string: link) {
-                    pageRow(L("قوانین", "Terms of use"), icon: "doc.text", url: url)
+                NavigationLink { LegalView(kind: .rules) } label: {
+                    Label(L("قوانین", "Terms of use"), systemImage: "doc.text")
                 }
-                if let link = appState.config.privacyLink, let url = URL(string: link) {
-                    pageRow(L("حریم خصوصی", "Privacy policy"), icon: "hand.raised", url: url)
+                NavigationLink { LegalView(kind: .privacy) } label: {
+                    Label(L("حریم خصوصی", "Privacy policy"), systemImage: "hand.raised")
                 }
                 if !appState.isInternational {
                     if let telegram = appState.config.telegram, let url = URL(string: telegram) {

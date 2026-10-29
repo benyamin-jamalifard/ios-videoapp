@@ -39,6 +39,24 @@ final class NavigationUITests: XCTestCase {
         }
     }
 
+    /// Terms and privacy are native screens, in the app's language.
+    func testLegalPagesOpen() {
+        for mode in ["ir", "intl"] {
+            let names = mode == "ir" ? ["قوانین", "حریم خصوصی"] : ["Terms of use", "Privacy policy"]
+            for (index, name) in names.enumerated() {
+                let app = launch(mode, "kelaketfilm://app/tab/profile")
+                let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+                XCTAssertTrue(row.waitForExistence(timeout: 30), "\(mode): no \(name) row")
+                if !onScreen(row, in: app) { app.swipeUp() }
+                row.tap()
+                let page = app.descendants(matching: .any).matching(identifier: "legal").firstMatch
+                XCTAssertTrue(page.waitForExistence(timeout: 10), "\(mode): \(name) did not open")
+                XCTAssertFalse(app.webViews.firstMatch.exists, "\(mode): \(name) opened a web page")
+                save("\(mode)-legal-\(index)")
+            }
+        }
+    }
+
     // MARK: Flows
 
     private func homeOpensFilm(mode: String) {

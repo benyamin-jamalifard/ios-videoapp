@@ -65,6 +65,8 @@ struct BoxOfficeView: View {
         do {
             boxOffice = try await APIClient.shared.boxOffice()
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if boxOffice == nil { self.error = error.localizedDescription }
         }

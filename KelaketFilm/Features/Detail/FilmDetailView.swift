@@ -82,6 +82,8 @@ struct FilmDetailView: View {
             if detail == nil { AppAnalytics.viewedTitle(id: loaded.id, name: loaded.displayName) }
             detail = loaded
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if detail == nil { self.error = error.localizedDescription }
         }
@@ -636,6 +638,8 @@ struct FilmDetailView: View {
             } else {
                 detail?.watchlisted.toggle()
             }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -650,6 +654,8 @@ struct FilmDetailView: View {
             let response = try await appState.api.togglePostNotification(postId: id)
             detail?.notified = response.isAdded
             notice = response.text
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -664,6 +670,8 @@ struct FilmDetailView: View {
             let response = try await appState.api.vote(postId: id, userId: userId, action: action)
             notice = response.text ?? (response.success ? "رای شما ثبت شد." : "رای ثبت نشد.")
             if response.success { await load() }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -681,7 +689,8 @@ struct FilmDetailView: View {
                 ? "دانلود این محتوا نیاز به اشتراک ویژه دارد."
                 : "برای تماشای این محتوا نیاز به اشتراک ویژه دارید."
         case .unavailableInRegion:
-            notice = "Streaming isn't available in your region."
+            // No playback abroad, and nothing is said about it.
+            break
         }
         return false
     }

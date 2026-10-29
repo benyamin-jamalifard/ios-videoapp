@@ -63,6 +63,8 @@ struct WalletView: View {
             entries += result.items
             totalPages = result.pagination?.totalPages ?? page
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }
@@ -168,6 +170,8 @@ struct ReferralView: View {
             entries += result.items
             totalPages = result.pagination?.totalPages ?? page
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }
@@ -224,6 +228,8 @@ struct VipTransactionsView: View {
         do {
             items = try await appState.api.vipTransactions(page: 1)
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }

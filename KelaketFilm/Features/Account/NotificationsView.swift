@@ -65,6 +65,8 @@ struct NotificationsView: View {
         do {
             items = try await appState.api.notifications()
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if items == nil { self.error = error.localizedDescription }
         }

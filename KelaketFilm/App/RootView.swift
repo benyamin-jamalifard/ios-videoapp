@@ -106,7 +106,7 @@ private struct OfflineBanner: View {
                 Button(L("دانلودها", "Downloads")) { router.tab = .downloads }
                     .font(.caption.bold())
             }
-            Button { network.refresh() } label: {
+            Button { network.retry() } label: {
                 Image(systemName: "arrow.clockwise").font(.caption.bold())
             }
         }

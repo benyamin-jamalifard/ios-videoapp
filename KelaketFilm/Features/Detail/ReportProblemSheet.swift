@@ -108,6 +108,8 @@ struct ReportProblemSheet: View {
             isSending = false
             try? await Task.sleep(nanoseconds: 1_600_000_000)
             dismiss()
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             result = (error.localizedDescription, false)
             isSending = false

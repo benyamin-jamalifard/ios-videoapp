@@ -125,6 +125,8 @@ private struct OTPLoginForm: View {
                     // -1 is the 2-minute rate limit; its message says how long to wait.
                     message = response.message ?? "ارسال کد ناموفق بود."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 message = error.localizedDescription
             }
@@ -143,6 +145,8 @@ private struct OTPLoginForm: View {
                 } else {
                     message = response.message ?? "کد وارد شده صحیح نیست."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 message = error.localizedDescription
             }
@@ -215,6 +219,8 @@ private struct PasswordLoginForm: View {
                 } else {
                     message = response.message ?? "ورود ناموفق بود."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 message = error.localizedDescription
             }

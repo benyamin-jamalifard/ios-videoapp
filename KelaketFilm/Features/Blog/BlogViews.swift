@@ -116,6 +116,8 @@ struct BlogPostView: View {
         do {
             post = try await APIClient.shared.blogPost(id: id)
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }

@@ -87,8 +87,11 @@ struct SearchView: View {
                 error = nil
                 return
             }
-            try? await Task.sleep(nanoseconds: 450_000_000)
-            guard !Task.isCancelled else { return }
+            // Typing waits for a short pause; a filter change or a saved answer is instant.
+            if key.text != resultsKey?.text, SearchCache.shared.posts(for: key.text, key.filter, page: 1) == nil {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+            }
             await search(key)
         }
     }
@@ -206,7 +209,7 @@ struct SearchView: View {
         isLoading = true
         defer { if self.key == key { isLoading = false } }
         do {
-            let posts = try await appState.api.search(key.text, filter: key.filter, page: 1)
+            let posts = try await fetch(key, page: 1)
             // A newer keystroke or filter took over while this one ran.
             guard !Task.isCancelled, self.key == key else { return }
             results = posts
@@ -215,6 +218,10 @@ struct SearchView: View {
             pageSize = posts.count
             hasMore = !posts.isEmpty
             error = nil
+            // The next page is fetched ahead, so scrolling on doesn't wait.
+            if hasMore { Task { _ = try? await fetch(key, page: 2) } }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             guard !Task.isCancelled, self.key == key else { return }
             results = []
@@ -228,19 +235,65 @@ struct SearchView: View {
         let key = self.key
         isLoading = true
         defer { isLoading = false }
-        guard let posts = try? await appState.api.search(key.text, filter: key.filter, page: page + 1),
-              self.key == key
-        else { return }
+        guard let posts = try? await fetch(key, page: page + 1), self.key == key else { return }
         page += 1
         results += posts.filter { post in !results.contains { $0.id == post.id } }
         // A short page is the last one.
         hasMore = !posts.isEmpty && posts.count >= pageSize
+        if hasMore { Task { _ = try? await fetch(key, page: page + 1) } }
+    }
+
+    /// One page of results: from the last few minutes' answers when possible.
+    /// A year after the title becomes a year filter; if that finds nothing,
+    /// the words are searched as typed.
+    private func fetch(_ key: SearchKey, page: Int) async throws -> [Post] {
+        if let saved = SearchCache.shared.posts(for: key.text, key.filter, page: page) { return saved }
+        let query = SearchQuery(key.text)
+        var filter = key.filter
+        if let year = query.year, filter.fromYear == nil, filter.toYear == nil {
+            filter.fromYear = year
+            filter.toYear = year
+        }
+        var posts = try await appState.api.search(query.text, filter: filter, page: page)
+        if posts.isEmpty, page == 1, filter != key.filter {
+            posts = try await appState.api.search(SearchQuery.normalize(key.text), filter: key.filter, page: 1)
+        }
+        if page == 1 { posts = query.rank(posts) }
+        SearchCache.shared.store(posts, for: key.text, key.filter, page: page)
+        return posts
     }
 
     private func remember(_ text: String) {
         guard text.count >= 2 else { return }
         let updated = [text] + recent.filter { $0 != text }
         recentStorage = updated.prefix(8).joined(separator: "\n")
+    }
+}
+
+/// Recent search answers, so retyping, going back or changing a filter back
+/// shows results at once. Kept five minutes, so lists stay current.
+@MainActor
+private final class SearchCache {
+    static let shared = SearchCache()
+
+    private var entries: [String: (posts: [Post], date: Date)] = [:]
+
+    func posts(for text: String, _ filter: SearchFilter, page: Int) -> [Post]? {
+        guard let entry = entries[key(text, filter, page)], Date().timeIntervalSince(entry.date) < 300 else { return nil }
+        return entry.posts
+    }
+
+    func store(_ posts: [Post], for text: String, _ filter: SearchFilter, page: Int) {
+        if entries.count > 60 {
+            entries = entries.filter { Date().timeIntervalSince($0.value.date) < 300 }
+            if entries.count > 60 { entries.removeAll() }
+        }
+        entries[key(text, filter, page)] = (posts, Date())
+    }
+
+    private func key(_ text: String, _ filter: SearchFilter, _ page: Int) -> String {
+        let query = filter.query.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+        return "\(SearchQuery.normalize(text))|\(query)|\(page)"
     }
 }
 

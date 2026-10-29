@@ -105,6 +105,8 @@ struct EditProfileView: View {
                     appState.updateUser(displayName: name, email: email, avatar: response.avatar)
                 }
                 dismiss()
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 message = error.localizedDescription
             }
@@ -164,6 +166,8 @@ struct ForgotPasswordView: View {
                 // Success is `{success: true, data: {sent: true, msg}}`.
                 sent = response.success && !response.error
                 message = response.text ?? (sent ? "ایمیل ارسال شد." : "ارسال نشد.")
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 message = error.localizedDescription
             }

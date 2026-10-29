@@ -86,6 +86,8 @@ struct ActiveSessionsView: View {
         do {
             sessions = try await appState.api.activeSessions()
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }
@@ -105,6 +107,8 @@ struct ActiveSessionsView: View {
             } else {
                 sessions?.removeAll { $0.sid == sid }
             }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }
@@ -120,6 +124,8 @@ struct ActiveSessionsView: View {
             // The server ended this session too.
             appState.signOut()
             dismiss()
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }

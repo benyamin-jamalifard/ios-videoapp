@@ -97,6 +97,8 @@ struct MyListsView: View {
     private func load() async {
         do {
             lists = try await appState.api.myLists()
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if lists == nil { lists = [] }
             notice = error.localizedDescription
@@ -107,6 +109,8 @@ struct MyListsView: View {
         do {
             try await appState.api.deleteList(id: list.id)
             lists?.removeAll { $0.id == list.id }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -175,6 +179,8 @@ struct ListDetailView: View {
         do {
             try await APIClient.shared.updateListItems(id: list.id, mode: "remove", films: [post.id])
             films.removeAll { $0.id == post.id }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -292,6 +298,8 @@ struct ListEditor: View {
                 }
                 await onSaved()
                 dismiss()
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 self.error = error.localizedDescription
             }
@@ -363,6 +371,8 @@ struct AddToListSheet: View {
     private func load() async {
         do {
             lists = try await appState.api.myLists()
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             lists = lists ?? []
             self.error = error.localizedDescription
@@ -376,6 +386,8 @@ struct AddToListSheet: View {
             try await appState.api.updateListItems(id: list.id, mode: contains ? "remove" : "add",
                                                    films: [postId])
             await load()
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }

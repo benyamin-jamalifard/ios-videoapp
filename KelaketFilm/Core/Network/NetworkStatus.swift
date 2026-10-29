@@ -6,7 +6,7 @@ import Network
 /// In an Iranian internet shutdown the phone still has a connection (the
 /// national network), so the device's own status says little. What matters
 /// is whether the site answered the last request: when it didn't, the app
-/// shows its saved copies, checks again every 30 seconds, and reloads
+/// shows its saved copies, checks again every 15 seconds, and reloads
 /// everything as soon as the site is back.
 @MainActor
 final class NetworkStatus: ObservableObject {
@@ -22,6 +22,7 @@ final class NetworkStatus: ObservableObject {
 
     private let monitor = NWPathMonitor()
     private var probeTask: Task<Void, Never>?
+    private var verifyTask: Task<Void, Never>?
     private var periodicTask: Task<Void, Never>?
     private var backgroundedAt: Date?
     private var lastRefresh = Date()
@@ -35,16 +36,39 @@ final class NetworkStatus: ObservableObject {
         startPeriodicRefresh()
     }
 
-    /// Called by `APIClient` after each request.
+    /// Called by `APIClient` after each request. A failed request alone does
+    /// not show the banner: the site is asked once more, and only when that
+    /// fails too is it marked out of reach (a slow route or a dropped request
+    /// on a working connection is not an outage).
     func report(reachable: Bool) {
-        guard reachable != serverReachable else { return }
-        serverReachable = reachable
         if reachable {
+            verifyTask?.cancel()
+            verifyTask = nil
+            guard !serverReachable else { return }
+            serverReachable = true
             probeTask?.cancel()
             probeTask = nil
             refresh()
-        } else {
+            return
+        }
+        guard serverReachable, verifyTask == nil else { return }
+        verifyTask = Task {
+            let answered = await APIClient.shared.ping()
+            guard !Task.isCancelled else { return }
+            verifyTask = nil
+            guard !answered, serverReachable else { return }
+            serverReachable = false
             startProbing()
+        }
+    }
+
+    /// The banner's retry button: asks the site now.
+    func retry() {
+        Task {
+            if await APIClient.shared.ping() {
+                report(reachable: true)
+                refresh()
+            }
         }
     }
 
@@ -82,7 +106,7 @@ final class NetworkStatus: ObservableObject {
         guard probeTask == nil else { return }
         probeTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
                 guard !Task.isCancelled else { return }
                 if await APIClient.shared.ping() {
                     probeTask = nil

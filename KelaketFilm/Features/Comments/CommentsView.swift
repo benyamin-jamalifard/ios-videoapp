@@ -154,6 +154,8 @@ struct CommentsView: View {
             page += 1
             totalPages = result.totalPages ?? page
             comments += result.comments
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -172,6 +174,8 @@ struct CommentsView: View {
             } else {
                 await reload()
             }
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             notice = error.localizedDescription
         }
@@ -249,6 +253,8 @@ struct CommentComposer: View {
                     onSent(response.text ?? "نظر شما ثبت شد.")
                     dismiss()
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 self.error = error.localizedDescription
             }

@@ -26,15 +26,23 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "آدرس سایت در تنظیمات اپ وارد نشده است."
+            return L("آدرس سایت در تنظیمات اپ وارد نشده است.", "The app isn't set up yet.")
         case .badStatus(_, let message?):
             return message
         case .badStatus(let code, nil):
-            return "خطای سرور (\(code))"
+            return L("خطای سرور (\(code))", "Server error (\(code))")
         case .decoding:
-            return "پاسخ سرور قابل خواندن نبود."
-        case .transport:
-            return "اتصال به اینترنت برقرار نیست."
+            return L("پاسخ سرور قابل خواندن نبود.", "The server's answer couldn't be read.")
+        case .transport(let error):
+            // Only say "no internet" when the phone really has none.
+            switch (error as? URLError)?.code {
+            case .notConnectedToInternet?, .dataNotAllowed?, .internationalRoamingOff?:
+                return L("اتصال به اینترنت برقرار نیست.", "You're not connected to the internet.")
+            case .timedOut?:
+                return L("سرور دیر پاسخ داد. دوباره تلاش کنید.", "The server took too long. Try again.")
+            default:
+                return L("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.", "Couldn't reach the server. Try again.")
+            }
         }
     }
 }
@@ -144,17 +152,32 @@ final class APIClient {
             await report(reachable: true)
             return value
         } catch let error as APIError {
-            switch error {
-            case .transport, .badStatus(500..., _):
-                await report(reachable: false)
-                if let cacheKey, let saved = OfflineCache.responses.read(cacheKey),
-                   let value = try? decode(T.self, from: saved, path: endpoint.path) {
-                    return value
-                }
-            default:
-                break
+            // A request the app cancelled itself (screen closed, search text
+            // changed, lists reloading) says nothing about the site.
+            if case .transport(let underlying) = error, Self.isCancellation(underlying) || Task.isCancelled {
+                throw CancellationError()
+            }
+            guard Self.meansSiteDown(error) else { throw error }
+            await report(reachable: false)
+            if let cacheKey, let saved = OfflineCache.responses.read(cacheKey),
+               let value = try? decode(T.self, from: saved, path: endpoint.path) {
+                return value
             }
             throw error
+        }
+    }
+
+    static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
+    }
+
+    /// No answer at all, or the CDN/gateway saying the site is down. A plain
+    /// 500 from one route is that route's error, not an outage.
+    private static func meansSiteDown(_ error: APIError) -> Bool {
+        switch error {
+        case .transport: return true
+        case .badStatus(let code, _): return [502, 503, 504].contains(code) || (520...530).contains(code)
+        default: return false
         }
     }
 
@@ -180,7 +203,7 @@ final class APIClient {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            if (error as? URLError)?.code == .cancelled { throw APIError.transport(error) }
+            if Self.isCancellation(error) { throw APIError.transport(error) }
             // The address may have been filtered or moved: find the current one and retry once.
             if recoverHost, await self.recoverHost() {
                 return try await fetch(endpoint, recoverHost: false)

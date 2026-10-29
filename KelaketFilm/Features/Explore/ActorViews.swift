@@ -53,6 +53,8 @@ struct ActorView: View {
             guard works == nil else { return }
             do {
                 works = try await APIClient.shared.actorWorks(actorId: actorId)
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 self.error = error.localizedDescription
             }

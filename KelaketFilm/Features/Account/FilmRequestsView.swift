@@ -95,6 +95,8 @@ struct FilmRequestsView: View {
                     name = ""
                     await load()
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 // Limits (e.g. 24-hour quota) arrive as HTTP errors with a Persian message.
                 notice = error.localizedDescription

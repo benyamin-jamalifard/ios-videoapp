@@ -13,7 +13,7 @@ struct ProfileView: View {
                     VStack(spacing: 12) {
                         Image("Logo").resizable().scaledToFit().frame(height: 64)
                         Text(Bundle.main.displayName).font(.headline)
-                        Text("Browse our catalogue of movies and series. Streaming and downloads are available in Iran only.")
+                        Text("Browse our catalogue of movies and series.")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
                             .multilineTextAlignment(.center)

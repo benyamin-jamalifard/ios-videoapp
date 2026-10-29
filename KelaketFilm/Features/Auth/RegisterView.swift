@@ -74,6 +74,8 @@ struct RegisterView: View {
                 } else {
                     message = response.message ?? "ثبت‌نام ناموفق بود."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 // Validation failures come back as WP_Error with a Persian message.
                 message = error.localizedDescription

@@ -9,6 +9,8 @@ final class HomeViewModel: ObservableObject {
         do {
             home = try await api.homeScreen()
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if home == nil { self.error = error.localizedDescription }
         }

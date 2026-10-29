@@ -133,6 +133,29 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(filter.count, 3)
     }
 
+    func testSearchQueryNormalizesAndTakesTheYear() {
+        let query = SearchQuery("  جوكر   ۲۰۱۹ ")
+        XCTAssertEqual(query.text, "جوکر")
+        XCTAssertEqual(query.year, 2019)
+        XCTAssertNil(SearchQuery("1917").year, "a title that is a year stays the title")
+        XCTAssertEqual(SearchQuery("1917").text, "1917")
+        XCTAssertEqual(SearchQuery("علي (1402)").year, 1402)
+        XCTAssertNil(SearchQuery("blade runner 2049x").year)
+    }
+
+    func testSearchRanksTitleMatchesFirst() throws {
+        let json = """
+        [{"id": 1, "name": "داستان عامه پسند", "en_title": "Pulp Fiction"},
+         {"id": 2, "name": "جوکر: جنون مشترک", "en_title": "Joker: Folie à Deux"},
+         {"id": 3, "name": "جوکر", "en_title": "Joker"},
+         {"id": 4, "name": "بتمن", "en_title": "The Dark Knight"}]
+        """
+        let posts = try decoder.decode([Post].self, from: Data(json.utf8))
+        XCTAssertEqual(SearchQuery("joker").rank(posts).map(\.id), [3, 2, 1, 4])
+        XCTAssertEqual(SearchQuery("جوكر").rank(posts).map(\.id), [3, 2, 1, 4])
+        XCTAssertEqual(SearchQuery("dark knight").rank(posts).map(\.id), [4, 1, 2, 3])
+    }
+
     func testArchiveFilterQuery() {
         let filter = ArchiveFilter(postType: 995, genre: 1703, year: 1402, sort: "newest")
         XCTAssertEqual(filter.query, ["type_of_post": "995", "genre": "1703", "yearr": "1402", "sort": "newest"])

@@ -78,6 +78,8 @@ struct TicketsView: View {
         do {
             tickets = try await appState.api.tickets()
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if tickets == nil { self.error = error.localizedDescription }
         }
@@ -148,6 +150,8 @@ private struct NewTicketView: View {
                 } else {
                     error = response.text ?? "ارسال تیکت ناموفق بود."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 self.error = error.localizedDescription
             }
@@ -227,6 +231,8 @@ struct TicketChatView: View {
         do {
             messages = try await appState.api.ticketMessages(ticketId: ticket.id)
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             self.error = error.localizedDescription
         }
@@ -245,6 +251,8 @@ struct TicketChatView: View {
                 } else {
                     error = response.text ?? "ارسال پیام ناموفق بود."
                 }
+            } catch is CancellationError {
+                // Superseded or the screen closed: not an error to show.
             } catch {
                 self.error = error.localizedDescription
             }

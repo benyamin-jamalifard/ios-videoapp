@@ -272,6 +272,8 @@ final class Pager<Item>: ObservableObject {
             items += result.items
             hasMore = result.hasMore && !result.items.isEmpty
             error = nil
+        } catch is CancellationError {
+            // Superseded or the screen closed: not an error to show.
         } catch {
             if items.isEmpty { self.error = error.localizedDescription }
         }

@@ -54,7 +54,16 @@ struct RootView: View {
             }
         }
         .background(Theme.background.ignoresSafeArea())
-        .task { await appState.bootstrap() }
+        .task {
+            await appState.bootstrap()
+            #if DEBUG
+            // CI screenshots: `-kf.open kelaketfilm://app/tab/search` opens a screen
+            // without the system's "Open in" prompt that `simctl openurl` raises.
+            if let link = UserDefaults.standard.string(forKey: "kf.open"), let url = URL(string: link) {
+                router.open(url)
+            }
+            #endif
+        }
         // Tie the device to the account whenever either the FCM token or the user changes.
         .task(id: "\(router.pushToken ?? "")|\(appState.token ?? "")") {
             guard appState.isSignedIn, let pushToken = router.pushToken else { return }

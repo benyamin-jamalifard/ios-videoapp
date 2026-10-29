@@ -92,20 +92,25 @@ POST_ID=${SAMPLE_POST_ID:-81141}
 shoot() {
   xcrun simctl io "$UDID" screenshot "screenshots/$1.png" >/dev/null 2>&1 || true
 }
-for mode in ir intl; do
+# Each screen is a fresh launch with `-kf.open <link>` (Debug builds only):
+# `simctl openurl` makes iOS ask "Open in …?" over the app.
+launch() {
   xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" -kf.region.override "$mode"
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -kf.region.override "$1" -kf.open "$2" >/dev/null
+}
+for mode in ir intl; do
+  launch "$mode" ""
   sleep 3
   shoot "$mode-1-launch"
   sleep 20
   shoot "$mode-2-home"
-  xcrun simctl openurl "$UDID" "kelaketfilm://app/film/$POST_ID"
-  sleep 12
+  launch "$mode" "kelaketfilm://app/film/$POST_ID"
+  sleep 14
   shoot "$mode-3-film"
   n=4
   for tab in explore search downloads profile; do
-    xcrun simctl openurl "$UDID" "kelaketfilm://app/tab/$tab"
-    sleep 7
+    launch "$mode" "kelaketfilm://app/tab/$tab"
+    sleep 10
     shoot "$mode-$n-$tab"
     n=$((n + 1))
   done

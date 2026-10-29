@@ -26,7 +26,11 @@ struct Post: Decodable, Identifiable, Hashable {
     @LossyBool var doble: Bool
 
     var displayName: String {
-        if Region.isInternational, let enTitle { return enTitle }
+        if Region.isInternational {
+            // Some lists (the archive) carry only the Persian title; then no
+            // caption: the poster itself shows the English one.
+            return enTitle ?? [name, title].compactMap { $0 }.first { !Localizer.containsPersian($0) } ?? ""
+        }
         return name ?? title ?? enTitle ?? ""
     }
 

@@ -98,7 +98,7 @@ final class NavigationUITests: XCTestCase {
 
     /// Taps a visible poster and checks the film page opens and stays open.
     private func openPoster(in app: XCUIApplication, step: String, index: Int = 0) {
-        let visible = app.buttons.matching(identifier: "poster").allElementsBoundByIndex.filter(\.isHittable)
+        let visible = app.buttons.matching(identifier: "poster").allElementsBoundByIndex.filter { onScreen($0, in: app) }
         XCTAssertFalse(visible.isEmpty, "\(step): no visible poster")
         visible[min(index, visible.count - 1)].tap()
         let page = app.descendants(matching: .any).matching(identifier: "film-detail").firstMatch
@@ -110,10 +110,20 @@ final class NavigationUITests: XCTestCase {
         sleep(1)
     }
 
+    /// `isHittable` fails outright for cells a lazy row has not laid out, so
+    /// the frame is checked instead (clear of the navigation and tab bars).
+    private func onScreen(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard element.exists else { return false }
+        let frame = element.frame
+        guard !frame.isEmpty, frame.width > 20 else { return false }
+        let safe = app.frame.insetBy(dx: 0, dy: 100)
+        return safe.contains(CGPoint(x: frame.midX, y: frame.midY)) && frame.minX >= 0 && frame.maxX <= app.frame.maxX
+    }
+
     /// Scrolls a horizontal row until `element` is on screen.
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for direction in [-1.0, 1.0] {
-            for _ in 0..<4 where !element.isHittable {
+            for _ in 0..<4 where !onScreen(element, in: app) {
                 let origin = app.coordinate(withNormalizedOffset: .zero)
                 let start = origin.withOffset(CGVector(dx: app.frame.midX, dy: element.frame.midY))
                 start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 220 * direction, dy: 0)))

@@ -45,6 +45,8 @@ struct RootView: View {
                     }
                 }
                 .animation(.easeInOut, value: network.serverReachable)
+                // Rebuilt when the region changes so UIKit views take the new direction.
+                .id(appState.isInternational)
                 // A video playing on the TV stays reachable from every tab.
                 .overlay(alignment: .bottom) {
                     CastMiniBar().padding(.bottom, 52)

@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 
 /// App-wide state: remote config and the signed-in session.
 @MainActor
@@ -18,6 +18,7 @@ final class AppState: ObservableObject {
 
     init(api: APIClient = .shared) {
         self.api = api
+        Self.matchUIKitDirection(isInternational)
         Theme.restore()
         token = Keychain.string(for: Self.tokenKey)
         api.userToken = token
@@ -55,10 +56,20 @@ final class AppState: ObservableObject {
             self.config = config
         }
         let international = await region
-        if international != isInternational { isInternational = international }
+        if international != isInternational {
+            Self.matchUIKitDirection(international)
+            isInternational = international
+        }
         isConfigLoaded = true
         // The international catalogue hides everything an account is for.
         if !isInternational { await refreshSubscription() }
+    }
+
+    /// The app is localized in Persian only, so UIKit lays out right to left.
+    /// In the English app SwiftUI is left to right, and a List or Form on an
+    /// RTL UIKit view would draw its rows mirrored; UIKit has to match.
+    private static func matchUIKitDirection(_ international: Bool) {
+        UIView.appearance().semanticContentAttribute = international ? .forceLeftToRight : .unspecified
     }
 
     /// Stores the JWT from a successful OTP or password login.

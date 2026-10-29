@@ -69,6 +69,11 @@ final class LocalizerTests: XCTestCase {
         XCTAssertEqual(Localizer.english(name: "آمریکا", slug: "united-states"), "United States")
         XCTAssertEqual(Localizer.english(name: "کشور تازه", slug: "south-korea"), "South Korea")
         XCTAssertEqual(Localizer.english(name: "Film-Noir", slug: "film-noir"), "Film-Noir")
+        XCTAssertEqual(Localizer.english(name: "movie", slug: "movie"), "Movies")
+        XCTAssertEqual(Localizer.persian(name: "Film-Noir", slug: "film-noir"), "فیلم نوآر")
+        XCTAssertEqual(Localizer.persian(name: "movie", slug: "movie"), "فیلم")
+        XCTAssertEqual(Localizer.persian(name: "اکشن", slug: "action"), "اکشن")
+        XCTAssertEqual(Localizer.persian(name: "Kdrama", slug: "kdrama"), "Kdrama")
         XCTAssertEqual(Localizer.english(name: "آهنگ", slug: "%d8%a2%d9%87%d9%86%da%af"), "Music")
         XCTAssertNil(Localizer.english(name: "واژه ناشناخته", slug: "%d9%88"))
     }

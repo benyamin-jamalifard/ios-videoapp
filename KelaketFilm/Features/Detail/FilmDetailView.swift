@@ -176,8 +176,8 @@ struct FilmDetailView: View {
                     Text(detail.displayName)
                         .font(.title3.bold())
                         .lineLimit(3)
-                    if let other = appState.isInternational ? detail.name : detail.enTitle,
-                       other != detail.displayName {
+                    // Abroad, only English: the Persian name is left out.
+                    if !appState.isInternational, let other = detail.enTitle, other != detail.displayName {
                         Text(other).font(.footnote).foregroundStyle(Theme.secondaryText)
                     }
                     HStack(spacing: 8) {

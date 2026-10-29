@@ -6,13 +6,24 @@ import Foundation
 enum Localizer {
     /// A genre, country or type name for the current mode.
     static func term(name: String?, slug: String?) -> String {
-        guard Region.isInternational else { return name ?? "" }
+        guard Region.isInternational else { return persian(name: name, slug: slug) }
         return english(name: name, slug: slug) ?? name ?? ""
+    }
+
+    /// The site names a few terms in English ("Film-Noir", "movie"); the
+    /// Persian app shows them in Persian.
+    static func persian(name: String?, slug: String?) -> String {
+        guard let name, !containsPersian(name) else { return name ?? "" }
+        let key = (slug?.removingPercentEncoding ?? name).lowercased()
+        return persianNames[key] ?? persianNames[name.lowercased()] ?? name
     }
 
     /// The English name, or nil when there is none.
     static func english(name: String?, slug: String?) -> String? {
-        if let name, !containsPersian(name) { return name }
+        // All-lowercase names are slugs used as names ("movie").
+        if let name, !containsPersian(name) {
+            return name == name.lowercased() ? slugOverrides[name] ?? prettify(name) : name
+        }
         if let name, let known = words[normalized(name)] { return known }
         if let slug = slug?.removingPercentEncoding, !slug.isEmpty, !containsPersian(slug),
            slug.rangeOfCharacter(from: .letters) != nil {
@@ -91,6 +102,15 @@ enum Localizer {
     ]
 
     private static let kinds: Set<String> = ["Movies", "Series", "Animation", "Anime", "Cartoons", "Documentary"]
+
+    private static let persianNames = [
+        "movie": "فیلم", "film": "فیلم", "series": "سریال", "animation": "انیمیشن", "anime": "انیمه",
+        "film-noir": "فیلم نوآر", "game-show": "مسابقه", "reality-tv": "ریالیتی شو", "news": "خبری",
+        "talk-show": "تاک شو", "music": "موزیک", "musical": "موزیکال", "documentary": "مستند",
+        "short": "کوتاه", "sport": "ورزشی", "biography": "بیوگرافی", "history": "تاریخی",
+        "family": "خانوادگی", "fantasy": "فانتزی", "sci-fi": "علمی تخیلی", "adult": "بزرگسال",
+        "tv-movie": "فیلم تلویزیونی", "western": "وسترن", "war": "جنگی",
+    ]
 
     private static let fillers: Set<String> = ["ها", "های", "و", "با", "از"]
 

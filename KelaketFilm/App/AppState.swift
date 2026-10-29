@@ -33,8 +33,6 @@ final class AppState: ObservableObject {
     var userId: Int? { user?.id ?? subscription?.id }
 
     func bootstrap() async {
-        // The window exists by now (it did not when init ran).
-        Self.matchUIKitDirection(isInternational)
         // After the first launch the app opens at once on the saved settings;
         // the site, its address and the country are checked behind the UI, so
         // a slow site or blocked foreign services (shutdowns) never hold the splash.
@@ -70,18 +68,8 @@ final class AppState: ObservableObject {
     /// The app is localized in Persian only, so UIKit lays out right to left.
     /// In the English app SwiftUI is left to right, and a List or Form on an
     /// RTL UIKit view would draw its rows mirrored; UIKit has to match.
-    /// The window's trait as well, for what UIKit draws from it (the back arrow).
     private static func matchUIKitDirection(_ international: Bool) {
         UIView.appearance().semanticContentAttribute = international ? .forceLeftToRight : .unspecified
-        guard #available(iOS 17, *) else { return }
-        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
-        for window in windows {
-            if international {
-                window.traitOverrides.layoutDirection = .leftToRight
-            } else {
-                window.traitOverrides.remove(UITraitLayoutDirection.self)
-            }
-        }
     }
 
     /// Stores the JWT from a successful OTP or password login.

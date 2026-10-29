@@ -8,6 +8,11 @@ extension APIClient {
         try await send(Endpoint(path: "mobile/v2/config", timeout: 12))
     }
 
+    /// The settings from the last launch that reached the site.
+    func savedConfig() -> AppConfig? {
+        saved(Endpoint(path: "mobile/v2/config"))
+    }
+
     func homeScreen() async throws -> HomeScreen {
         try await send(Endpoint(path: "mobile/v2/home_screen"))
     }

@@ -32,7 +32,14 @@ final class AppState: ObservableObject {
     var userId: Int? { user?.id ?? subscription?.id }
 
     func bootstrap() async {
-        // The country lookup runs alongside the config request; the splash waits for both.
+        // After the first launch the app opens at once on the saved settings;
+        // the site, its address and the country are checked behind the UI, so
+        // a slow site or blocked foreign services (shutdowns) never hold the splash.
+        if let saved = api.savedConfig() {
+            Theme.apply(saved)
+            config = saved
+            isConfigLoaded = true
+        }
         async let region = Region.refresh()
         if let host = await api.fetchPublishedHost(), host != api.currentHost {
             api.useHost(host)
@@ -47,7 +54,8 @@ final class AppState: ObservableObject {
             Theme.apply(config)
             self.config = config
         }
-        isInternational = await region
+        let international = await region
+        if international != isInternational { isInternational = international }
         isConfigLoaded = true
         // The international catalogue hides everything an account is for.
         if !isInternational { await refreshSubscription() }

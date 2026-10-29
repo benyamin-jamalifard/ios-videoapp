@@ -158,6 +158,12 @@ final class APIClient {
         }
     }
 
+    /// The last saved answer for a GET, without asking the server.
+    func saved<T: Decodable>(_ endpoint: Endpoint, as type: T.Type = T.self) -> T? {
+        guard let data = OfflineCache.responses.read(cacheKey(for: endpoint)) else { return nil }
+        return try? decode(T.self, from: data, path: endpoint.path)
+    }
+
     /// True when the site answers at all; used to notice the end of an outage.
     func ping() async -> Bool {
         guard let request = try? makeRequest(Endpoint(path: "mobile/v2/config", timeout: 10)),

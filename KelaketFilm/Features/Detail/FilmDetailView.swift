@@ -11,6 +11,7 @@ struct FilmDetailView: View {
     @State private var webLink: WebLink?
     @State private var showLogin = false
     @State private var showAddToList = false
+    @State private var showReport = false
     @State private var selectedSeason = 0
     @State private var notice: String?
 
@@ -63,6 +64,9 @@ struct FilmDetailView: View {
         }
         .sheet(isPresented: $showAddToList) {
             AddToListSheet(postId: id).environmentObject(appState)
+        }
+        .sheet(isPresented: $showReport) {
+            ReportProblemSheet(postId: id, title: detail?.displayName ?? "").environmentObject(appState)
         }
         .alert(notice ?? "", isPresented: Binding(
             get: { notice != nil },
@@ -327,7 +331,11 @@ struct FilmDetailView: View {
 
     private func filmLinksSection(_ detail: FilmDetail) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionTitle(text: "پخش و دانلود")
+            HStack {
+                SectionTitle(text: "پخش و دانلود")
+                Spacer()
+                ReportProblemButton { showReport = true }
+            }
 
             ForEach(Array(detail.filmDl.enumerated()), id: \.offset) { row, group in
                 VStack(alignment: .leading, spacing: 12) {
@@ -398,6 +406,7 @@ struct FilmDetailView: View {
             HStack {
                 SectionTitle(text: "قسمت‌ها")
                 Spacer()
+                ReportProblemButton { showReport = true }
                 if seasons.count > 1 {
                     Picker("فصل", selection: $selectedSeason) {
                         ForEach(seasons.indices, id: \.self) { i in

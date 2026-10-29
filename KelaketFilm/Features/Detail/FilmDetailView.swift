@@ -19,6 +19,7 @@ struct FilmDetailView: View {
         Group {
             if let detail {
                 content(detail)
+                    .accessibilityIdentifier("film-detail")
             } else if let error {
                 ErrorStateView(message: error) { Task { await load() } }
             } else {

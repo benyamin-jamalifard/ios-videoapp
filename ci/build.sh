@@ -83,37 +83,31 @@ grep -E "error:|failed|Executed|TEST (SUCCEEDED|FAILED)" test.log | tail -40 || 
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
 xcrun simctl status_bar "$UDID" override --time "9:41" || true
-xcrun simctl install "$UDID" "$APP"
-
-# Screenshots of both modes: Iran (Persian, full app) and abroad (English,
-# browse only). Screens are opened through the app's URL scheme.
 mkdir -p screenshots
+
+# UI tests: tap through home, categories, search and the explore lists into
+# film pages, in both modes, against the live site. Each step saves a
+# screenshot into screenshots/ (ui-*.png).
+TEST_RUNNER_KF_SHOTS="$PWD/screenshots" xcodebuild test \
+  -workspace KelaketFilm.xcworkspace \
+  -scheme KelaketFilmUITests \
+  -destination "id=$UDID" \
+  -derivedDataPath build \
+  CODE_SIGNING_ALLOWED=NO \
+  ${overrides[@]+"${overrides[@]}"} > uitest.log 2>&1 && echo "UI tests passed" || echo "UI tests FAILED"
+grep -E "error:|' (passed|failed)|Executed|TEST (SUCCEEDED|FAILED)" uitest.log | tail -60 || true
+cp uitest.log screenshots/ 2>/dev/null || true
+
+# One known film page in each mode (Debug builds read `-kf.open <link>`;
+# `simctl openurl` would make iOS ask "Open in …?" over the app).
+xcrun simctl install "$UDID" "$APP"
 POST_ID=${SAMPLE_POST_ID:-81141}
-shoot() {
-  xcrun simctl io "$UDID" screenshot "screenshots/$1.png" >/dev/null 2>&1 || true
-}
-# Each screen is a fresh launch with `-kf.open <link>` (Debug builds only):
-# `simctl openurl` makes iOS ask "Open in …?" over the app.
-launch() {
-  xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" -kf.region.override "$1" -kf.open "$2" >/dev/null
-}
 for mode in ir intl; do
-  launch "$mode" ""
-  sleep 3
-  shoot "$mode-1-launch"
-  sleep 20
-  shoot "$mode-2-home"
-  launch "$mode" "kelaketfilm://app/film/$POST_ID"
-  sleep 14
-  shoot "$mode-3-film"
-  n=4
-  for tab in explore search downloads profile; do
-    launch "$mode" "kelaketfilm://app/tab/$tab"
-    sleep 10
-    shoot "$mode-$n-$tab"
-    n=$((n + 1))
-  done
+  xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -kf.region.override "$mode" \
+    -kf.open "kelaketfilm://app/film/$POST_ID" >/dev/null
+  sleep 15
+  xcrun simctl io "$UDID" screenshot "screenshots/$mode-film.png" >/dev/null 2>&1 || true
 done
 xcrun simctl spawn "$UDID" log show --last 5m --predicate 'process == "KelaketFilm"' --style compact \
   > screenshots/app.log || true
@@ -122,7 +116,7 @@ cp test.log screenshots/ 2>/dev/null || true
 # Small copies in the build log, readable where the artifact storage is blocked.
 echo "=== THUMBNAILS ==="
 for shot in screenshots/*.png; do
-  sips -s format jpeg -s formatOptions 35 -Z 420 "$shot" --out /tmp/thumb.jpg >/dev/null 2>&1 || continue
+  sips -s format jpeg -s formatOptions 35 -Z 360 "$shot" --out /tmp/thumb.jpg >/dev/null 2>&1 || continue
   echo "THUMB $(basename "$shot" .png) $(base64 -i /tmp/thumb.jpg | tr -d '\n')"
 done
 echo "=== END THUMBNAILS ==="

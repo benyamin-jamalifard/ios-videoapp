@@ -149,7 +149,7 @@ struct ListDetailView: View {
                 // Own lists: long-press a poster to remove it.
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 105), spacing: 12)], spacing: 16) {
                     ForEach(films) { post in
-                        NavigationLink(value: FilmRoute(id: post.id)) {
+                        NavigationLink { FilmDetailView(id: post.id) } label: {
                             PosterCard(post: post, width: 105)
                         }
                         .buttonStyle(.plain)

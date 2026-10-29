@@ -148,7 +148,7 @@ private struct FeaturedSlider: View {
     var body: some View {
         TabView(selection: $selection) {
             ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
-                NavigationLink(value: FilmRoute(id: post.id)) {
+                NavigationLink { FilmDetailView(id: post.id) } label: {
                     VStack(spacing: 12) {
                         RemoteImage(url: post.posterURL)
                             .frame(width: 190, height: 280)
@@ -243,7 +243,7 @@ private struct ContinueWatchingRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(block.data) { item in
-                        NavigationLink(value: FilmRoute(id: item.id)) {
+                        NavigationLink { FilmDetailView(id: item.id) } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 RemoteImage(url: item.imageURL)
                                     .frame(width: 200, height: 112)

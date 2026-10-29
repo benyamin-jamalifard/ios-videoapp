@@ -92,3 +92,19 @@ targets:
         CODE_SIGNING_ALLOWED: NO
     scheme:
       testTargets: [KelaketFilmTests]
+
+  # Taps through the app against the live site (see ci/build.sh).
+  KelaketFilmUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: KelaketFilmUITests
+    dependencies:
+      - target: KelaketFilm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(KF_BUNDLE_ID).uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: KelaketFilm
+    scheme:
+      testTargets: [KelaketFilmUITests]

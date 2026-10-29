@@ -18,7 +18,7 @@ struct WatchlistView: View {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(posts) { post in
-                                NavigationLink(value: FilmRoute(id: post.id)) {
+                                NavigationLink { FilmDetailView(id: post.id) } label: {
                                     PosterCard(post: post, width: 105)
                                 }
                                 .buttonStyle(.plain)

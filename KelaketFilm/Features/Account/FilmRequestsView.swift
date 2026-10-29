@@ -70,7 +70,7 @@ struct FilmRequestsView: View {
         }
         // Once the admin links the request to a post, it opens that post.
         if let postId = request.postId, postId > 0 {
-            NavigationLink(value: FilmRoute(id: postId)) { content }
+            NavigationLink { FilmDetailView(id: postId) } label: { content }
         } else {
             content
         }

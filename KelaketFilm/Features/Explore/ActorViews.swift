@@ -108,11 +108,10 @@ struct ActorsArchiveView: View {
                 try? await Task.sleep(nanoseconds: 400_000_000)
                 guard !Task.isCancelled else { return }
             }
-            pager.replaceFetch { page in
+            await pager.show(text) { page in
                 let result = try await APIClient.shared.actors(search: text, page: page)
                 return (result.data, result.pagination?.hasMore ?? false)
             }
-            await pager.reload()
         }
     }
 }

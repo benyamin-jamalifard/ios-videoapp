@@ -65,6 +65,7 @@ struct ExploreView: View {
                             genreCard(genre)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("genre")
                     }
                 }
                 .padding(.horizontal)

@@ -20,7 +20,7 @@ struct BoxOfficeView: View {
                 }
                 ForEach(Array(boxOffice.data.enumerated()), id: \.offset) { _, item in
                     if let postId = item.postId, postId > 0 {
-                        NavigationLink(value: FilmRoute(id: postId)) { row(item) }
+                        NavigationLink { FilmDetailView(id: postId) } label: { row(item) }
                             .listRowBackground(Theme.surface)
                     } else {
                         row(item).listRowBackground(Theme.surface)
@@ -86,6 +86,7 @@ struct WeeklyScheduleView: View {
 
     @State private var day = WeeklyScheduleView.today
     @State private var series: [WeeklySeries]?
+    @State private var loadedDay: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -108,7 +109,7 @@ struct WeeklyScheduleView: View {
                             .listRowBackground(Color.clear)
                     }
                     ForEach(series) { item in
-                        NavigationLink(value: FilmRoute(id: item.id)) {
+                        NavigationLink { FilmDetailView(id: item.id) } label: {
                             HStack(spacing: 12) {
                                 RemoteImage(url: URL(string: item.poster ?? ""))
                                     .frame(width: 50, height: 75)
@@ -132,8 +133,13 @@ struct WeeklyScheduleView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(L("برنامه پخش", "TV schedule"))
         .task(id: day) {
+            // Kept on return from a series page; reloaded for another day.
+            guard loadedDay != day || series == nil else { return }
             series = nil
-            series = (try? await APIClient.shared.weeklySeries(day: day)) ?? []
+            let result = try? await APIClient.shared.weeklySeries(day: day)
+            guard !Task.isCancelled else { return }
+            series = result ?? []
+            loadedDay = day
         }
     }
 
@@ -161,7 +167,7 @@ struct Top250View: View {
             ForEach(Array(pager.items.enumerated()), id: \.offset) { index, item in
                 Group {
                     if let postId = item.postId {
-                        NavigationLink(value: FilmRoute(id: postId)) { row(item, onSite: true) }
+                        NavigationLink { FilmDetailView(id: postId) } label: { row(item, onSite: true) }
                     } else {
                         row(item, onSite: false)
                     }
@@ -184,11 +190,10 @@ struct Top250View: View {
         .navigationTitle(L("۲۵۰ برتر IMDb", "IMDb Top 250"))
         .task(id: list) {
             let current = list
-            pager.replaceFetch { page in
+            await pager.show(current) { page in
                 let result = try await APIClient.shared.top250(list: current, page: page)
                 return (result.data, page < (result.pages ?? page))
             }
-            await pager.reload()
         }
     }
 

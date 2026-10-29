@@ -147,10 +147,11 @@ struct PostRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(posts) { post in
-                        NavigationLink(value: FilmRoute(id: post.id)) {
+                        NavigationLink { FilmDetailView(id: post.id) } label: {
                             PosterCard(post: post)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("poster")
                     }
                 }
                 .padding(.horizontal)
@@ -219,10 +220,11 @@ struct PosterGrid: View {
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 105), spacing: 12)], spacing: 16) {
             ForEach(Array(posts.enumerated()), id: \.offset) { index, post in
-                NavigationLink(value: FilmRoute(id: post.id)) {
+                NavigationLink { FilmDetailView(id: post.id) } label: {
                     PosterCard(post: post, width: 105)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("poster")
                 .onAppear {
                     if index == posts.count - 1 { onReachEnd?() }
                 }
@@ -242,6 +244,7 @@ final class Pager<Item>: ObservableObject {
 
     private var page = 0
     private var hasMore = true
+    private var loadedKey: AnyHashable?
     /// Returns the items of a 1-based page and whether more pages follow.
     private var fetch: (Int) async throws -> (items: [Item], hasMore: Bool)
 
@@ -249,9 +252,14 @@ final class Pager<Item>: ObservableObject {
         self.fetch = fetch
     }
 
-    /// For screens whose query changes (filters, search text); call `reload()` after.
-    func replaceFetch(_ fetch: @escaping (Int) async throws -> (items: [Item], hasMore: Bool)) {
+    /// Shows the list for `key` (a filter, a search text). Returning to the
+    /// screen with the same key keeps the loaded items and scroll position;
+    /// a new key starts over.
+    func show<Key: Hashable>(_ key: Key, fetch: @escaping (Int) async throws -> (items: [Item], hasMore: Bool)) async {
+        if isLoaded, loadedKey == AnyHashable(key) { return }
+        loadedKey = AnyHashable(key)
         self.fetch = fetch
+        await reload()
     }
 
     func reload() async {

@@ -44,15 +44,14 @@ struct ArchiveView: View {
         .sheet(isPresented: $showFilters) {
             ArchiveFilterSheet(filter: $filter, locked: baseFilter)
         }
-        // A new pager per filter set; the fetch closure captures the filter.
+        // Reloads when the filters change, not on return from a film.
         .task(id: filter) {
             let current = filter
-            pager.replaceFetch { page in
+            await pager.show(current) { page in
                 let result = try await APIClient.shared.archive(current, page: page)
                 let maxPages = result.paginationValues?.maxPages ?? page
                 return (result.data, page < maxPages)
             }
-            await pager.reload()
         }
         .refreshable { await pager.reload() }
     }
